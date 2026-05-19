@@ -1,0 +1,37 @@
+\section{Introduction}
+\label{sec:intro}
+
+This blueprint accompanies the
+\href{https://github.com/{{GITHUB_USER}}/{{project-name}}}{\texttt{ {{project-name}} }}
+Lean~4 / mathlib4 formalization. The goal is a proof of \textbf{ {{THEOREM_NAME}} }.
+
+% Replace this paragraph with a one-paragraph statement of the headline
+% theorem and the proof route the project will follow.
+
+\subsection*{Phase plan}
+
+The Lean code will be organized into phases tracked in
+\href{https://github.com/{{GITHUB_USER}}/{{project-name}}/blob/master/ROADMAP.md}{\texttt{ROADMAP.md}}.
+
+\begin{enumerate}
+  \item \textbf{Phase 1 --- name.} One-sentence description.
+        (Files: \texttt{File1.lean}.)
+  % \item ...
+\end{enumerate}
+
+\subsection*{Reading this blueprint}
+
+Statements that are formalized in Lean carry a green tick and a
+\texttt{\textbackslash lean\{\}} pointer linking back to the API
+documentation. The \emph{dependency graph view} (linked from the
+navigation bar) is the best place to see at a glance how the chapters
+fit together.
+
+% Example theorem with the standard markup. Delete or replace once
+% the first real lemma lands.
+\begin{theorem}
+  \label{thm:placeholder}
+  \lean{ {{PROJECT_NAME}}.hello }
+  \leanok
+  Replace this placeholder with the first formalized statement.
+\end{theorem}

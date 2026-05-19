@@ -1,0 +1,62 @@
+name: Build & deploy site
+
+on:
+  push:
+    branches:
+      - master
+      - main
+  workflow_dispatch:
+
+# Permissions for the docgen-action to deploy to GitHub Pages.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Cancel an older run when a newer push arrives on the same branch.
+concurrency:
+  group: pages-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build_project:
+    runs-on: ubuntu-latest
+    name: Build project, blueprint, and docs
+    steps:
+      - name: Free up disk space on the runner
+        uses: jlumbroso/free-disk-space@54081f138730dfa15788a46383842cd2f914a1be # v1.3.1
+        with:
+          tool-cache: false
+          android: true
+          dotnet: false
+          haskell: false
+          large-packages: false
+          docker-images: false
+          swap-storage: false
+
+      - name: Checkout project
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 1
+
+      - name: Build and lint Lean project
+        uses: leanprover/lean-action@38fbc41a8c28c4cbaec22d7f7de508ec2e7c0dd9 # v1.5.0
+        with:
+          build: true
+          lint: true
+
+      # Scan {{PROJECT_NAME}}/Mathlib/ for upstream-eligible lemmas and
+      # generate the dashboard pages. Must run *before* docgen-action so
+      # Jekyll picks up the generated _includes during the homepage build.
+      - name: Upstreaming dashboard
+        uses: leanprover-community/upstreaming-dashboard-action@main
+        with:
+          website-directory: ./home_page
+          project-name: {{PROJECT_NAME}}
+          branch-name: master
+
+      - name: Compile blueprint and documentation, deploy to Pages
+        uses: leanprover-community/docgen-action@main
+        with:
+          blueprint: true
+          homepage: home_page

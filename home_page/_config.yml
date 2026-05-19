@@ -1,0 +1,24 @@
+title: {{PROJECT_TITLE}}
+description: >-
+  {{ONE_LINE_BLURB}}
+
+baseurl: "/{{project-name}}"
+url: "https://{{GITHUB_USER}}.github.io"
+
+repository: {{GITHUB_USER}}/{{project-name}}
+
+theme: minima
+
+plugins:
+  - jekyll-remote-theme
+  - jekyll-seo-tag
+
+minima:
+  skin: classic
+
+# Don't process the artifacts that the docgen-action drops alongside us.
+exclude:
+  - vendor
+  - Gemfile
+  - Gemfile.lock
+  - .bundle

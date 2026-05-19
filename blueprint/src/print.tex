@@ -1,0 +1,42 @@
+% !TeX root = print.tex
+% !TEX program = xelatex
+% Print (PDF) version of the blueprint. Built via `inv bp`.
+
+\documentclass[11pt,reqno,a4paper,dvipsnames]{amsart}
+
+\usepackage[dvipsnames]{xcolor}
+\usepackage[textwidth=14cm]{geometry}
+\usepackage{xfrac}
+\usepackage{polyglossia}
+\setdefaultlanguage{english}
+
+\usepackage{amsmath,amssymb}
+\usepackage{enumitem}
+
+\usepackage{tikz-cd}
+
+\usepackage{mathtools}
+\usepackage[warnings-off={mathtools-colon,mathtools-overbracket}]{unicode-math}
+\usepackage{fontspec}
+\setmathfont{latinmodern-math.otf}
+
+\usepackage{amsthm}
+\usepackage{etexcmds}
+\usepackage{thmtools}
+
+\usepackage[stretch=10]{microtype}
+
+\input{preamble/common}
+\input{preamble/print}
+\usepackage[nameinlink, capitalize]{cleveref}
+
+\title{ {{PROJECT_TITLE}} }
+\author{ {{AUTHOR}} }
+
+\begin{document}
+\maketitle
+\tableofcontents
+\input{chapter/main}
+\bibliographystyle{amsalpha}
+\bibliography{bibliography}
+\end{document}

@@ -1,0 +1,18 @@
+% Macros used only by the print (PDF) build. Not built directly.
+
+% Neutralise the leanblueprint plasTeX commands so the print version compiles
+% under plain xelatex.
+\newcommand{\proves}[1]{}
+\newcommand{\lean}[1]{}
+\newcommand{\leanok}{}
+\newcommand{\notready}{}
+\newcommand{\discussion}[1]{}
+\tracinglostchars=3
+
+% Make \uses{label1,label2,...} resolve labels invisibly (for cross-reference
+% sanity) without printing anything in the PDF.
+\ExplSyntaxOn
+\NewDocumentCommand{\uses}{m}
+ {\clist_map_inline:nn{#1}{\vphantom{\ref{##1}}}%
+  \ignorespaces}
+\ExplSyntaxOff

@@ -1,0 +1,37 @@
+name: hopscotch (mathlib bump)
+
+# Bumps the mathlib pin in lake-manifest.json by trying to advance it to
+# mathlib's master tip. If the new commit builds cleanly, opens / updates
+# a PR against this repo's `master`. If it breaks, bisects to find the
+# breaking mathlib commit and opens / updates a tracking issue.
+#
+# Adjust the cron line if daily is too noisy — weekly (`0 18 * * 1`) is
+# a reasonable alternative for a solo-dev cadence.
+
+on:
+  schedule:
+    - cron: "0 18 * * *"   # daily at 18:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write       # push the bump branch
+  pull-requests: write  # open / update the bump PR
+  issues: write         # open / close the tracking issue
+
+# Don't pile up overlapping runs if the daily cron and a manual dispatch collide.
+concurrency:
+  group: hopscotch
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    name: Advance mathlib pin
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - uses: leanprover-community/hopscotch-action@v1
+        with:
+          dependency: mathlib
+          to: master       # mathlib's default branch
+          pr-base: master  # this repo's default branch

@@ -1,0 +1,28 @@
+% Web version of the blueprint. Built with plastex via `inv web`.
+
+\documentclass{amsart}
+
+\usepackage{amsmath,amsfonts,amsthm,amssymb}
+\usepackage{graphicx}
+\DeclareGraphicsExtensions{.svg,.png,.jpg}
+\usepackage[showmore, dep_graph, project=../../]{blueprint}
+
+\usepackage{tikz-cd}
+\usepackage{tikz}
+
+\input{preamble/common}
+\input{preamble/web}
+\usepackage[capitalize]{cleveref}
+
+\github{https://github.com/{{GITHUB_USER}}/{{project-name}}}
+\dochome{https://{{GITHUB_USER}}.github.io/{{project-name}}/docs}
+
+\title{ {{PROJECT_TITLE}} }
+\author{ {{AUTHOR}} }
+
+\begin{document}
+\maketitle
+\input{chapter/main}
+\bibliographystyle{amsalpha}
+\bibliography{bibliography}
+\end{document}
