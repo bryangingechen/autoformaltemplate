@@ -42,17 +42,15 @@ REPO_ROOT="$( cd -- "$SCRIPT_DIR/.." && pwd )"
 
 cd "$REPO_ROOT"
 
-# 1. Rename the project directory and aggregator file.
-if [ -d "{{PROJECT_NAME}}" ]; then
-    mv "{{PROJECT_NAME}}" "$PASCAL"
-fi
-if [ -f "{{PROJECT_NAME}}.lean" ]; then
-    mv "{{PROJECT_NAME}}.lean" "$PASCAL.lean"
-fi
-
-# 2. Find all tracked text files (or all text files if not a git repo)
+# 1. Find all tracked text files (or all text files if not a git repo)
 #    and sed-replace the placeholders. Excludes binary files and the
 #    rename script itself.
+#
+#    Content replacement runs BEFORE the directory/file renames in
+#    step 2: `git ls-files` reports the paths as committed, so doing
+#    the renames first would make every path under {{PROJECT_NAME}}/
+#    stale and the loop's existence guard would silently skip them
+#    (leaving un-replaced placeholders inside the renamed directory).
 if [ -d .git ] && command -v git >/dev/null 2>&1; then
     FILES="$(git ls-files | grep -v '^scripts/rename\.sh$' || true)"
 else
@@ -98,6 +96,15 @@ echo "$FILES" | while IFS= read -r f; do
     # contributor introduces binary assets.
     replace_in_file "$f"
 done
+
+# 2. Rename the project directory and aggregator file (after the
+#    content pass — see the note above).
+if [ -d "{{PROJECT_NAME}}" ]; then
+    mv "{{PROJECT_NAME}}" "$PASCAL"
+fi
+if [ -f "{{PROJECT_NAME}}.lean" ]; then
+    mv "{{PROJECT_NAME}}.lean" "$PASCAL.lean"
+fi
 
 # 3. Print next-step checklist.
 cat <<EOF
