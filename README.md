@@ -1,3 +1,14 @@
+<!-- template-only:begin -->
+> [!IMPORTANT]
+> **This is a template repository, not a formalization project.** The
+> `{{…}}` placeholders below are filled in when a new project is
+> instantiated from this scaffold. Start with
+> **[TEMPLATE.md](TEMPLATE.md)** — the guide to creating a project from
+> this template — or read on to see what an instantiated project's
+> front page looks like. This banner is stripped automatically by
+> `scripts/rename.sh`.
+<!-- template-only:end -->
+
 # {{PROJECT_TITLE}}
 
 [![Build & deploy site](https://github.com/{{GITHUB_USER}}/{{project-name}}/actions/workflows/push.yml/badge.svg)](https://github.com/{{GITHUB_USER}}/{{project-name}}/actions/workflows/push.yml)

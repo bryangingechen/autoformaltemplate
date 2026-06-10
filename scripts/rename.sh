@@ -12,6 +12,14 @@
 #   placeholders too. Otherwise those stay as placeholders and you'll
 #   need to edit them by hand.
 #
+# Besides replacing placeholders, the script strips template-only
+# content: blocks fenced by `<!-- template-only:begin -->` /
+# `<!-- template-only:end -->` HTML comments (the README / CLAUDE.md
+# template banners) and any line containing `template-only-line` (the
+# workflow `if:` guards that make CI skip on the un-instantiated
+# template). It also deletes `.github/workflows/template-ci.yml`, the
+# template repo's own smoke-test workflow.
+#
 # After success the script self-deletes (since the template doesn't
 # need it after instantiation) and prints a next-step checklist.
 
@@ -72,6 +80,8 @@ replace_in_file() {
     local tmp
     tmp="$(mktemp)"
     sed \
+        -e '/<!-- template-only:begin -->/,/<!-- template-only:end -->/d' \
+        -e '/template-only-line/d' \
         -e "s|{{PROJECT_NAME}}|$PASCAL|g" \
         -e "s|{{ProjectName}}|$PASCAL|g" \
         -e "s|{{project-name}}|$KEBAB|g" \
@@ -150,9 +160,12 @@ Next steps:
      for one-time setup.
 EOF
 
-# 4. Self-delete, and remove the scripts/ directory if that leaves it
+# 4. Remove template-meta files: the template repo's own CI workflow
+#    (only meaningful on the un-instantiated template), then
+#    self-delete, removing the scripts/ directory if that leaves it
 #    empty (an orphan empty scripts/ dir was real post-instantiation
 #    residue).
+rm -f .github/workflows/template-ci.yml
 rm -- "$0"
 rmdir "$SCRIPT_DIR" 2>/dev/null || true
 EOF_MARKER=1

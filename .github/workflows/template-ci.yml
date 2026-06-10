@@ -1,0 +1,97 @@
+name: Template CI
+
+# Meta-level CI for the template repo itself. The project workflows
+# (push.yml, push_pr.yml, hopscotch.yml) all skip while the repo is
+# un-instantiated — the placeholder lakefile can't build — so this is
+# the only check that actually runs here. It smoke-tests
+# instantiation: run rename.sh on the checkout, then verify that the
+# script-owned placeholders are gone, template-only markers were
+# stripped, the project directory was renamed, and every workflow
+# file is still valid YAML.
+#
+# rename.sh deletes this file at instantiation; projects created from
+# the template never run it.
+
+on:
+  push:
+    branches:
+      - master
+      - main
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke_test_instantiation:
+    if: ${{ endsWith(github.repository, 'autoformaltemplate') }}
+    runs-on: ubuntu-latest
+    name: Instantiate template and validate result
+    steps:
+      - name: Checkout template
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+
+      - name: Validate workflow YAML (template form)
+        run: |
+          python3 -c "import yaml" 2>/dev/null || python3 -m pip install --user --quiet pyyaml
+          python3 - <<'PYEOF'
+          import glob, sys, yaml
+          ok = True
+          for f in sorted(glob.glob('.github/workflows/*.yml')):
+              try:
+                  yaml.safe_load(open(f))
+                  print(f, 'OK')
+              except yaml.YAMLError as e:
+                  ok = False
+                  print(f'::error file={f}::{e}')
+          sys.exit(0 if ok else 1)
+          PYEOF
+
+      - name: Syntax-check rename.sh
+        run: bash -n scripts/rename.sh
+
+      - name: Run rename.sh
+        run: ./scripts/rename.sh TestProject test-user
+
+      - name: Check script-owned placeholders are gone
+        run: |
+          if grep -rEn '\{\{(PROJECT_NAME|ProjectName|project-name|GITHUB_USER)\}\}' . \
+              --exclude-dir=.git --exclude-dir=.lake; then
+            echo "::error::leftover script-owned placeholders after rename.sh"
+            exit 1
+          fi
+
+      - name: Check template-only markers were stripped
+        run: |
+          # TEMPLATE.md is excluded: it documents the marker mechanism
+          # (obliquely) and is deleted by hand post-instantiation.
+          if grep -rn 'template-only' . \
+              --exclude-dir=.git --exclude-dir=.lake --exclude=TEMPLATE.md; then
+            echo "::error::leftover template-only markers after rename.sh"
+            exit 1
+          fi
+
+      - name: Check project directory and aggregator were renamed
+        run: |
+          test -d TestProject
+          test -f TestProject.lean
+          test ! -e '{{PROJECT_NAME}}'
+          test ! -e '{{PROJECT_NAME}}.lean'
+          test ! -e scripts/rename.sh
+          test ! -e .github/workflows/template-ci.yml
+
+      - name: Validate workflow YAML (instantiated form)
+        run: |
+          python3 - <<'PYEOF'
+          import glob, sys, yaml
+          ok = True
+          for f in sorted(glob.glob('.github/workflows/*.yml')):
+              try:
+                  yaml.safe_load(open(f))
+                  print(f, 'OK')
+              except yaml.YAMLError as e:
+                  ok = False
+                  print(f'::error file={f}::{e}')
+          sys.exit(0 if ok else 1)
+          PYEOF

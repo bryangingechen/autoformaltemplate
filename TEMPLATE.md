@@ -18,8 +18,14 @@ The script:
 2. Sed-replaces `{{PROJECT_NAME}}`, `{{project-name}}`, `{{ProjectName}}`,
    `{{GITHUB_USER}}`, and the other placeholders across every tracked
    text file.
-3. Prints a next-step checklist.
-4. Self-deletes.
+3. Strips template-only content: the "this is a template" banners at
+   the top of `README.md` / `CLAUDE.md` and the workflow `if:` guards
+   that make project CI skip on the un-instantiated template (see
+   *Template-only content* below).
+4. Deletes `.github/workflows/template-ci.yml`, the template repo's
+   own smoke-test workflow.
+5. Prints a next-step checklist.
+6. Self-deletes.
 
 ## Placeholders the script replaces
 
@@ -37,11 +43,38 @@ The script:
 The script derives the PascalCase / kebab-case forms from the first
 argument; you only pass one project-name string.
 
+## Template-only content and the meta-level CI
+
+Some content should exist only while the repo is the un-instantiated
+template: the banners at the top of `README.md` and `CLAUDE.md` that
+tell visitors (and agents) they are looking at a template, and the
+job-level `if:` guards in `push.yml` / `push_pr.yml` / `hopscotch.yml`
+that make project CI skip here (the placeholder lakefile can't build,
+so those workflows can only fail before instantiation). That content
+is tagged with `template-only` markers — an HTML-comment begin/end
+pair for blocks, a single-line marker token for the workflow guards —
+and `rename.sh` strips all of it during instantiation. The exact
+marker spellings are deliberately not written out in this file: the
+strip pass also runs over TEMPLATE.md, and a stray literal marker here
+would delete real prose. See the top of `README.md` and the sed
+expressions in `scripts/rename.sh` for the spellings.
+
+Because the project workflows skip on the template repo, the only CI
+that runs here is `.github/workflows/template-ci.yml`. It smoke-tests
+instantiation on every push / PR: runs `rename.sh TestProject
+test-user` on the checkout, then fails if any script-owned placeholder
+or `template-only` marker survives, the project directory was not
+renamed, or any workflow file is left syntactically invalid YAML.
+`rename.sh` deletes it at instantiation, so projects created from the
+template never run it.
+
 ## What's in the template
 
 - **Infrastructure**: lakefile, lean-toolchain, .gitignore, .mcp.json,
-  GitHub Actions workflows (build/lint, mathlib hopscotch, dependabot),
-  blueprint build rig, home_page Jekyll skeleton, Apache-2.0 `LICENSE`.
+  GitHub Actions workflows (build/lint, mathlib hopscotch, dependabot,
+  plus the template-only `template-ci.yml` smoke test — see
+  *Template-only content* above), blueprint build rig, home_page
+  Jekyll skeleton, Apache-2.0 `LICENSE`.
 - **Process docs**: `CLAUDE.md` (root + per-subdirectory), `ROADMAP.md`,
   `DESIGN.md`, `CLEANUP.md`, `TACTICS-GOLF.md`, `TACTICS-QUIRKS.md`,
   `MODULE-SYSTEM.md` / `blueprint/AUTHORING.md` / `REFS.md`

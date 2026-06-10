@@ -6,6 +6,7 @@ on:
 
 jobs:
   build_project:
+    if: ${{ !endsWith(github.repository, 'autoformaltemplate') }} # template-only-line — skip on the un-instantiated template; rename.sh deletes this line
     runs-on: ubuntu-latest
     name: Build project (PR check)
     steps:

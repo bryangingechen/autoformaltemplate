@@ -25,6 +25,7 @@ concurrency:
 
 jobs:
   run:
+    if: ${{ !endsWith(github.repository, 'autoformaltemplate') }} # template-only-line — skip on the un-instantiated template; rename.sh deletes this line
     runs-on: ubuntu-latest
     name: Advance mathlib pin
     steps:

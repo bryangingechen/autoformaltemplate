@@ -1,3 +1,18 @@
+<!-- template-only:begin -->
+> **Template-repo notice (stripped at instantiation).** You are in
+> `autoformaltemplate`, the *template* this manual ships with — not an
+> instantiated formalization project. Everything below describes the
+> workflow of a project *created from* this template; the `{{…}}`
+> placeholders are intentional and `lake build` does not work here.
+> For work on the template itself (docs, workflows, the rename script,
+> syncing lessons from downstream projects), the operative guide is
+> `TEMPLATE.md`; the only CI that runs on this repo is
+> `.github/workflows/template-ci.yml`, which smoke-tests
+> `scripts/rename.sh` instantiation on every push. The per-session
+> workflow, phase machinery, and hand-off contract below do **not**
+> apply to template-meta work.
+<!-- template-only:end -->
+
 # CLAUDE.md — agent operating manual
 
 This file is the **agent-facing operating manual** for working on

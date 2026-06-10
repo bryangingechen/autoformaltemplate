@@ -20,6 +20,7 @@ concurrency:
 
 jobs:
   build_project:
+    if: ${{ !endsWith(github.repository, 'autoformaltemplate') }} # template-only-line — skip on the un-instantiated template; rename.sh deletes this line
     runs-on: ubuntu-latest
     name: Build project, blueprint, and docs
     steps:
@@ -52,7 +53,7 @@ jobs:
         uses: leanprover-community/upstreaming-dashboard-action@main
         with:
           website-directory: ./home_page
-          project-name: {{PROJECT_NAME}}
+          project-name: "{{PROJECT_NAME}}"
           branch-name: master
 
       - name: Compile blueprint and documentation, deploy to Pages
