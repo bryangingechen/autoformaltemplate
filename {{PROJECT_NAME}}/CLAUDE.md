@@ -248,7 +248,39 @@ It is what keeps the project's API gaps from accumulating silently.
 `../.github/workflows/push_pr.yml`); a failing lint blocks merge as
 surely as a failing build. The full-project linter (`runLinter`)
 catches `simpNF` and `unusedArguments` issues that the compile-time
-`mathlibStandardSet` linter misses, so don't skip it.
+`mathlibStandardSet` linter misses, so don't skip it. Both commands
+are exactly as written — `lake lint` takes **no arguments**
+(`lake lint <Module>` fails with `unexpected arguments`). If a lake
+invocation errors on syntax, re-read this section or `lake help`;
+do **not** guess flags.
+
+### Build discipline — one build, never `lake update`
+
+These rules exist because a downstream session OOM-crashed its
+machine (enharmonic, 2026-06-10) when a subagent guessed
+`lake build --update` as "lint syntax", silently rewrote
+`lake-manifest.json` + `lean-toolchain` to mathlib master, then
+piled up concurrent from-source mathlib builds trying to recover.
+A PreToolUse hook shipped with the template
+(`../.claude/hooks/block-lake-update.sh`, wired in
+`../.claude/settings.json`) blocks `lake update` / `--update`
+mechanically; the prose rules are the portable layer:
+
+- **Never run `lake update` or any lake command with `--update`.**
+  Toolchain and dependency bumps are a human decision and arrive
+  via the hopscotch workflow (next section), never mid-session.
+- **One `lake build` at a time, in the foreground.** Never start a
+  second build while one is running, never poll a slow build by
+  re-running it in a loop, never `&`-background a build inside a
+  Bash call (it gets orphaned), and never `pkill` lake (it orphans
+  the `lean` worker processes). If a build is slow, run it once
+  with a generous timeout and wait. A full mathlib rebuild is
+  **never** expected here — if `lake build` starts compiling
+  thousands of mathlib files, stop immediately and report; do not
+  wait it out or retry.
+- **`lean-toolchain` or `lake-manifest.json` modified in
+  `git status`?** Something has gone wrong. Stop, report, and let
+  the human decide; do not build on top of it and do not commit it.
 
 **A green build is not enough — the build must be _warning-clean_.**
 `lake build` exits 0 even when it emits compile-time `linter.*`

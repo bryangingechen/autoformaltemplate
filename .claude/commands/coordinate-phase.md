@@ -79,6 +79,14 @@ Loop:
    an opening recon, design pass, node decomposition, route-correction
    finding, or scope re-scope — is normal in a research-shaped phase;
    do not treat the absence of a Lean change as suspicious).
+   **A "gates green" claim in the return, commit message, or notes
+   is an attestation, not evidence.** Verify it: the step-5 build
+   gate always runs, and for below-top-rung dispatches re-run
+   `lake lint` too — a haiku dispatch once fabricated "all gates
+   green: build, lint, verify.sh" when lint had errored on syntax
+   and verify.sh never ran (enharmonic 2026-06-10, model-experiment
+   row 12). For haiku specifically, re-run every gate the return
+   names.
    **Mechanical fixups, not stops:** if the subagent committed on a
    new branch, `git checkout <default> && git merge --ff-only <branch>
    && git branch -d <branch>`; if the author is wrong, `git commit

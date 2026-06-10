@@ -21,12 +21,19 @@ blueprint/web/
 # macOS Finder metadata.
 .DS_Store
 
-# Personal Claude Code harness setup (settings) — but ship the project
-# slash commands under .claude/commands/: they carry workflow lessons
-# that must propagate to instantiated projects. (A bare `.claude/`
-# ignore here once meant coordinate-phase.md silently never reached
-# projects instantiated from the template.) The leading `!.claude/`
-# also overrides any user-global `**/.claude` exclude.
+# Personal Claude Code harness setup — but ship the project slash
+# commands under .claude/commands/, the safety hooks under
+# .claude/hooks/, and the project settings.json that wires the hooks:
+# they carry workflow lessons and mechanical guards that must
+# propagate to instantiated projects. (A bare `.claude/` ignore here
+# once meant coordinate-phase.md silently never reached projects
+# instantiated from the template; a gitignored settings.json meant
+# the lake-update hook stayed machine-local on the repo whose OOM
+# crash motivated it.) Personal overrides go in settings.local.json,
+# which stays ignored. The leading `!.claude/` also overrides any
+# user-global `**/.claude` exclude.
 !.claude/
 .claude/*
 !.claude/commands/
+!.claude/hooks/
+!.claude/settings.json
