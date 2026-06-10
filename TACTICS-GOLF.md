@@ -24,7 +24,9 @@ symptom-indexed and lighter.
    mirror it before landing the proof.
 3. **`fun_prop` for continuity / differentiability** — replace explicit
    `Continuous.add` / `Continuous.comp` chains with `by fun_prop` and tag
-   project helpers `@[fun_prop]` so they participate in the search.
+   project helpers `@[fun_prop]` so they participate in the search;
+   value-form `HasDerivAt` / `HasFDerivAt` goals stay on the named
+   chain-rule API regardless of tagging.
 4. **Lean LSP MCP** — when to use `lean_*` tools vs. the `Read` + `lake
    build` workflow, the local-first search order, and known-broken
    external services.
@@ -36,6 +38,41 @@ symptom-indexed and lighter.
    factoring a cross-`.induct`-case helper that consults a `let`-bound
    predicate `P`, bake `P`'s specific lambda directly into the helper's
    parameter type instead of taking `P` abstract + an `hP_def` equation.
+7. **`gcongr` for monotonicity-chain rewrites** — reach for `by gcongr`
+   on `mul_le_mul_of_nonneg_*` / `mul_lt_mul_of_pos_*` / `add_le_add`-shape
+   goals; its positivity discharger cannot extract per-index facts from a
+   `∀`-quantified hypothesis — pre-extract a per-index `have` first.
+8. **`dsimp only` over `change <RHS>` for definitional goal reshape** —
+   when the reshape is definitional (let-elimination, beta-reduction,
+   named unfolding), `dsimp only [names]` is shorter and name-anchored,
+   so it survives signature drift; `change` stays for propositional
+   bridges and refine-binder shaping.
+9. **Drop `simp`-default rewrites from a multi-step `rw` chain** — when
+   ≥2 rewrites of a 4+ argument `rw [a, b, c, d]` chain sit in `simp`'s
+   default set, fuse to `simp [<non-default-hints>]`, naming only the
+   hypothesis equations and `←`-direction rewrites.
+10. **Collapsing indicator sums** — factor a constant out with
+    `← Finset.mul_sum` before `Finset.sum_ite_eq'`; the collapse fires
+    only when the `if` is the whole summand.
+11. **Strong induction on a derived measure** —
+    `induction hN : m G using Nat.strong_induction_on generalizing G`;
+    `generalizing` is mandatory, the IH threads the measure-equation
+    first (`IH _ hlt G' rfl …`), and don't `subst hN`.
+12. **Iterating `+1` around a cyclic `Fin m`** — to propagate a
+    consecutive-equality `f i = f (i+1)` to a global one, induct over
+    `Fin.ofNat m j` on ℕ (not `(j : Fin m)` ascription, not
+    `Fin.induction`); `Fin.ofNat_val_eq_self` returns to `i`.
+13. **State a ℕ count `a − b + c` as `a + c − b`** — subtraction last,
+    so the single truncating `−` lands on a provably-large-enough
+    quantity (otherwise the statement is off-by-one at a boundary and
+    `omega` can't prove it).
+14. **LI family of `finrank`-many vectors spans `⊤`** — `LinearIndependent`
+    + `Fintype.card ι = finrank` ⟹ `span (range v) = ⊤`, via
+    `basisOfLinearIndependentOfCardEqFinrank` + `coe_…` + `Basis.span_eq`.
+15. **`(∑ i, f i).comp g` — go pointwise** — no `LinearMap.sum_comp` exists
+    and `map_sum` won't fire on `· ∘ₗ g`; discharge a `∘ₗ`-outside-
+    `Finset.sum` identity with `LinearMap.ext` + `LinearMap.congr_fun` +
+    `LinearMap.sum_apply`.
 
 ---
 
@@ -207,11 +244,43 @@ default set tends to absorb the wrapper / coercion boilerplate that
 `change` was unfolding by hand, and `grind` itself does the `split_ifs`
 work.
 
+**Name the rewrite, don't paraphrase the goal.** A `change <unfolded
+form>` whose only job is to expose what a downstream `rw` / `simp`
+needs is friction whenever the unfold has a named lemma. Replace
+with the `rw` / `simp only` form for self-documentation:
+`change x ∈ Set.Ioi 0` → `rw [Set.mem_Ioi]`;
+`change (s.restrict f) x = …` → `rw [Set.restrict_apply]`;
+unfolding a local `set`/`let` binding `h_def : foo = expr` → `rw
+[h_def]` (or fuse into a downstream `simp only [h_def, …]`). No-op
+`change`s (goal-form unchanged before/after the `change`, sitting
+next to a `linarith` / `ring` / `simp` that operates on the same
+display) are pure noise and remove cleanly — usually the only thing
+they did was add a visible signpost the proof body already carries
+via the named hypothesis next to it.
+
 **Keep `omega` in the back pocket.** For goals that are pure linear
 integer arithmetic with no equational reasoning to do (and where you
 don't need any lemma hints), `omega` is faster and more readable. Default
 to `grind` because most goals mix arithmetic with equational steps, but
 `omega` is the right call for purely arithmetic ones.
+
+**Synthesize typeclass instances from data, not from a dichotomy.**
+When a helper lemma requires `[Nontrivial X]` / `[Nonempty X]` / similar
+and you'd otherwise reach for `by_cases h : Subsingleton X` to handle
+both sides, check whether the data the *other* branch is built from
+already supplies the instance you need. If so, branch on that data
+condition instead — the typeclass becomes a one-line
+`haveI : Nontrivial X := nontrivial_of_ne v b hne` inside the branch
+that needs the helper, and the easy sub-case (where the data condition
+fails) usually collapses to a direct calculation that subsumes the
+Subsingleton case. (Observed in: a compactness proof that replaced
+`by_cases h : Subsingleton V` — with separate singleton-vs-Nontrivial
+branches that mostly duplicated end-game calculations — by a case
+split on membership in a distinguished vertex set, synthesizing
+`Nontrivial V` from a witness distinct from `v` via
+`nontrivial_of_ne` in the branch that needed it.) The dichotomy is
+the leftover of "the helper wants `Nontrivial`"; the data branch is
+the *cause*, and branching there eliminates the leftover.
 
 > Three `omega`/`grind`/`nlinarith` quirks that show up at
 > first-draft time (set-aliased atoms, commutativity/distributivity)
@@ -284,8 +353,37 @@ signature* rather than guessing at the canonical name.
 
 `fun_prop` chains continuity (and differentiability, measurability, etc.)
 facts automatically; prefer it over hand-written `Continuous.add` /
-`Continuous.comp` /`continuous_pi` chains. Local `Continuous` hypotheses
-in scope are picked up automatically.
+`Continuous.comp` / `continuous_pi` chains and over hand-written
+`ContDiff.comp` / `ContDiffAt.comp` / `Differentiable.comp` chains.
+Local `Continuous` / `ContDiff` / `Differentiable` hypotheses in scope
+are picked up automatically.
+
+**Property-form goals are in reach; value-form derivative goals are
+not, even when tagged.** `fun_prop` discharges goals of the shape
+`Continuous f`, `Differentiable 𝕜 f`, `ContDiff 𝕜 n f`,
+`ContDiffAt 𝕜 n f x` — the *function-property* family. For
+value-form goals like `HasDerivAt f f' x` / `HasFDerivAt f L x` the
+situation is subtler: mathlib *does* `@[fun_prop]`-tag selected
+value-form lemmas (`HasFDerivAt.comp`, `.fst` / `.snd` / `.prodMk`,
+etc.), so tagging a bare `HasDerivAt` head is at least syntactically
+legitimate — but empirically the discharger architecture cannot
+synthesize a chain-rule derivative term that unifies with a
+goal-specific derivative, and `fun_prop` still fails even with the
+predicate and the relevant chain rules (`HasDerivAt.comp`, `.add`,
+`hasDerivAt_id`, …) all tagged. **Net rule: don't reach for
+`fun_prop` on value-form `HasDerivAt` / `HasFDerivAt` goals,
+regardless of tagging — the named chain-rule API (`.comp`,
+`.comp_of_eq`, `.congr_of_eventuallyEq`) is the canonical fix.**
+
+**Discharger limitation: `∀`-quantified preconditions.** When
+`fun_prop` needs a per-index fact like `f e ≠ 0` to apply a
+preconditioned chain rule (e.g. `ContDiffAt.rpow`), it cannot
+extract that fact from a universally-quantified hypothesis like
+`hf : ∀ e, 0 < f e` already in scope. Pre-extract a per-index
+`have hne : f e ≠ 0 := (hf e).ne'` first — the same limitation is
+shared by the `gcongr` and `positivity` dischargers (see § 7). In
+practice the named `.comp` chain is often shorter than the
+pre-extraction dance; pick whichever reads better.
 
 ### Pattern
 
@@ -474,3 +572,398 @@ case case3 D h₁ h₂ P r hr_eq ih =>
 - If you can't get to a place where `r : MyResult D P` is in scope
   with `P` let-bound (no `.induct`-style binding), there is no defeq
   channel for the unification.
+
+---
+
+## 7. `gcongr` for monotonicity-chain rewrites
+
+`gcongr` is the right closer for the bread-and-butter
+monotonicity-chain shape: a goal `f X ≤ f Y` (or `<`) where the
+context supplies `X ≤ Y` (or `<`) and the appropriate positivity /
+nonnegativity preconditions for the outer `f`. Keep the named
+term-mode API (`Finset.sum_le_sum h`) when it's strictly shorter
+than the tactic form.
+
+### TL;DR
+
+| Goal shape | Reach for | Note |
+|---|---|---|
+| `w * X ≤ w * Y` with `X ≤ Y`, `0 ≤ w` | `by gcongr` | discharger pulls `0 ≤ w` from `hw : 0 ≤ w` in scope |
+| `w * X < w * Y` with `X < Y`, `0 < w` | `by gcongr; exact <0 < w>` | discharger reduces to the positivity precondition |
+| `a + c ≤ b + d` with `a ≤ b`, `c ≤ d` | `by gcongr` | inside `calc` use `_ ≤ ... := by gcongr` |
+| `∑ e ∈ s, f e ≤ ∑ e ∈ s, g e` with `h : ∀ e ∈ s, f e ≤ g e` | keep `Finset.sum_le_sum h` | gcongr works but `by gcongr with e he; exact h e he` is strictly longer |
+| `∑ e ∈ s, f e < ∑ e ∈ s, g e` with `∀ e ∈ s, f e ≤ g e` + 1 strict witness | keep `Finset.sum_lt_sum hle ⟨e₀, ...⟩` | gcongr fires the wrong rule (all-strict) |
+| Outer factors differ (`w * Z ≤ w * X + w * Y`, `Z ≤ X + Y`) | keep `have ... := mul_le_mul_*; linarith` | algebraic step, not a monotonicity step |
+
+### Pattern
+
+The conversion is uniform: replace a term-mode
+`mul_le_mul_of_nonneg_left h₁ h₂` (or `_right`, or
+`mul_lt_mul_of_pos_*`, or `add_le_add h₁ h₂`) with `by gcongr` and
+let `gcongr`'s discharger find `h₁` (the inner ≤) and `h₂` (the
+positivity precondition) by name in the local context.
+
+When the positivity precondition lives behind a `∀`-quantified
+hypothesis (e.g. `hw : ∀ e, 0 < w e`), pre-extract a per-index
+`have` first:
+
+```lean
+have hw_e : 0 < w e := hw e   -- gcongr discharger needs this in scope
+have : w e * X ≤ w e * Y := by gcongr
+```
+
+The `∀`-quantified-hypothesis limitation is shared with `fun_prop`
+(§ 3, preconditioned chain rules) and `positivity` — the mathlib
+discharger architecture does not extract per-index facts from `∀`
+hypotheses. Pre-extracting the per-index `have` is the standing
+pattern.
+
+### When the named API stays
+
+Three structural cases keep the named term-mode API ahead of `by
+gcongr`:
+
+- **Outer factors differ.** Goal `w * Z ≤ w * X + w * Y` from
+  `Z ≤ X + Y`. `gcongr` makes no progress because the RHS isn't a
+  monotonicity step in `Z`; the chain needs an algebraic
+  rearrangement (`have hwz := mul_le_mul_of_nonneg_left h hw.le;
+  linarith`).
+- **`Finset.sum_lt_sum` strict-witness shape.** When the hypotheses
+  are `∀ e ∈ s, f e ≤ g e` plus a strict witness
+  `⟨e₀, he₀, f e₀ < g e₀⟩`, the right rule is `Finset.sum_lt_sum`,
+  which `gcongr` does not select — instead it fires the all-strict
+  rule (`∀ e, f e < g e`), producing the wrong subgoal.
+- **Line-count loss against term-mode `Finset.sum_le_sum`.** For
+  `∑ e ∈ s, f e ≤ ∑ e ∈ s, g e` with `h : ∀ e ∈ s, f e ≤ g e`,
+  `Finset.sum_le_sum h` is one term; `by gcongr with e he; exact
+  h e he` is one tactic plus a follow-up. The term wins.
+
+### Project-helper tags
+
+Tag a project helper `@[gcongr]` only when an actual call site needs
+it for `gcongr` to fire — the "only when observed needed" rule from
+§ 3's `@[fun_prop]` discussion applies here too. Most
+inequality-chain steps reach mathlib's `mul_le_mul_*` /
+`Finset.sum_*` directly and need no project tags.
+
+### When it doesn't apply
+
+- **Goal isn't a monotonicity chain.** `gcongr` looks for an outer
+  function (`*`, `+`, `^`, `/`, `∑`, …) shared between LHS and RHS
+  and a hypothesis bridging the inner arguments. Goals where the
+  outer differs, or where the chain crosses a non-monotone step,
+  stay on the named API.
+- **Multi-step chains with intermediate algebra.** A goal that
+  *combines* a monotonicity step with a `ring`-rewrite or a
+  `linarith` arithmetic step usually doesn't compress past `have
+  := <monotone-step>; linarith`. `gcongr` does monotonicity; `ring`
+  / `linarith` do algebra.
+
+---
+
+## 8. `dsimp only` over `change <RHS>` for definitional goal reshape
+
+When `change <RHS>` is doing nothing more than a *definitional*
+reshape — let-eliminating a `let` / `set` / inner-`have` binding,
+beta-reducing a lambda application, or unfolding a definition via a
+named lemma — reach for `dsimp only` instead. The `change` form
+restates the full RHS (typo-prone, signature-fragile); `dsimp only`
+names the unfolding facts and lets Lean compute the reshape. It is
+shorter, name-anchored rather than form-anchored (so it survives
+signature drift), and composes with subsequent `rw` / `refine`
+chains without the next tactic having to re-match the restated form.
+
+### Pattern
+
+Three shapes this fires on:
+
+```lean
+-- (a) Lambda-beta reduction after a `set`-bound name: the closing
+-- `simp [offset]` already beta-reduces; drop the `change`.
+set offset := d + 1
+…
+-- change offset - (d : ℝ) = 0   ← delete
+simp [offset]
+```
+
+```lean
+-- (b) Let-elimination after `unfold` exposes a `let`-bound body:
+-- `dsimp only` inlines the inner binding and exposes the `if`.
+unfold myDef
+dsimp only        -- not: change 0 < (if h : posSet.Nonempty then … else 1)
+split_ifs
+```
+
+```lean
+-- (c) Named-lemma unfolding of a let-bound linear map.
+let g : (T → ℝ) →ₗ[ℝ] F := Fintype.linearCombination ℝ fun t : T => (t : F)
+…
+dsimp only [g, Fintype.linearCombination_apply]   -- not: change ∑ t : T, …
+rw [Finset.univ_eq_attach, …]
+```
+
+The diagnostic signal for *"`change` is covering for a definitional
+reshape, use `dsimp only`"*: the goal **before** `change` and the
+goal **after** the next tactic differ only by definitional unfolding
+(no propositional equality fires between them), and the `change`'s
+RHS spelling restates a substring that would unfold under `dsimp`
+given the right lemma names.
+
+### When `change` (or the named lemma) stays
+
+- **Propositional rewrites stay on `rw` / `simp`.** `dsimp only`
+  *only* fires on definitional equalities (`rfl`-reducible
+  unfoldings, beta, eta, let, projection). A coercion bridge that
+  needs `Set.ncard_eq_toFinset_card'` or `Finset.coe_filter` (both
+  propositional equalities, not `rfl`) stays on the named lemma —
+  `dsimp only [Set.ncard_eq_toFinset_card']` will *not* fire.
+- **`change` to fix a goal display for the next `refine`'s
+  elaboration.** When the next tactic is a `refine` with explicit
+  binder names whose types must literally syntactic-match the goal,
+  `change` is the right tool. `dsimp only` may over-reduce.
+- **Long restated RHS as documentation.** A two-screen `change …`
+  whose RHS *is* the math the proof is asserting (rather than a
+  trivial definitional reshape) stays — its prose-value is the
+  reshape and removing it hurts readability.
+
+### Diagnostic procedure
+
+When you find yourself writing `change <RHS>` between two tactics:
+
+1. Probe the goal at the position with `lean_goal`.
+2. Probe `dsimp only` (no args) and `dsimp only [<candidate lemma>]`
+   via `lean_multi_attempt` at the same position.
+3. If either produces a goal the next tactic can fire on, replace
+   `change <RHS>` with the `dsimp only` form. If neither does, the
+   `change` is covering for a propositional rewrite (named lemma
+   stays) or a refine-binder shape (`change` stays).
+
+---
+
+## 9. Drop `simp`-default rewrites from a multi-step `rw` chain
+
+When a 4+ argument `rw [a, b, c, d]` chain encodes a single
+mathematical step and two or more of its rewrites sit in `simp`'s
+default set, drop those from the hint list and reach for `simp
+[<non-default-hints>]`. The shape is "fuse the chain into one tactic
+by letting `simp` apply its default rewrites for free, only naming
+the hypothesis equations and `←`-direction rewrites that aren't
+already simp-tagged".
+
+### Pattern
+
+```lean
+-- `map_add` + `map_smul` + `add_sub_cancel` are in simp's default set.
+-- Old:
+have heach : ∀ i, f (ε • Pi.single i 1 + z i) = y := by
+  intro i
+  rw [map_add, map_smul, hfz i, add_sub_cancel]
+-- New: only the `hfz i` hypothesis equation is named.
+have heach : ∀ i, f (ε • Pi.single i 1 + z i) = y := by
+  intro i
+  simp [hfz i]
+```
+
+The same fusion applies when the chain mixes hypothesis equations
+with `@[simp]`-tagged algebra lemmas (`inner_neg_left`, `map_add`,
+`map_smul`, `add_sub_cancel`, `ContinuousLinearMap.coe_coe`,
+`Finset.sum_empty`, …) or `rfl`-shape coercion-bridge lemmas that
+simp normalises automatically (`Subtype.coe_eta`, etc.): keep the
+hypothesis equations and `←`-direction rewrites in the hint list,
+drop the rest.
+
+Distinct from the *recognise-the-mathlib-fused-lemma* shape (§ 2
+*Mirror-first rule* — when mathlib ships a lemma that bundles the
+whole chain, e.g. `inv_smul_smul₀` or `Finset.sum_erase`, one named
+lemma replaces it outright). The small-hint-list shape applies when
+no fused lemma exists but `simp` already covers the mechanical
+rewrites.
+
+### Diagnostic procedure
+
+1. Probe `simp [<full hint list>]` and `simp [<non-default subset>]`
+   at the position via `lean_multi_attempt`.
+2. If `simp` with the non-default subset closes (or produces a goal
+   the next tactic can fire on), drop the simp-default rewrites from
+   the hint list.
+3. If `simp [<full hint list>]` lints any of the rewrites as
+   "unused", that's the unblocking signal: simp already handles them
+   via the default set — drop them.
+
+### When the named `rw` chain stays
+
+- **`rw` ordering is load-bearing.** When the chain's order matters
+  (one rewrite must land *before* another substitutes the variable
+  it mentions), `simp`'s normalisation order may not reproduce it.
+  Pin the order with `rw [<load-bearing>]; simp` instead (the dual
+  pattern: `simp` handles the default-set tail after the
+  named-rewrites lead).
+- **The chain mentions a `set`-bound name on the LHS.** `simp` may
+  not unfold the `set`-bound name unless it's in the hint list; add
+  the name to the simp arg list, or pre-unfold with `dsimp only`
+  first (§ 8).
+- **The non-default subset has only one rewrite and the chain is
+  short.** `rw [h₁]` is already minimal; don't fuse for its own
+  sake.
+
+---
+
+## 10. Collapsing indicator sums — `← Finset.mul_sum` before `Finset.sum_ite_eq'`
+
+`Finset.sum_ite_eq'` (and `Finset.sum_ite_eq`) collapses `∑ x, if x = a
+then f x else 0` to `f a`, but **only fires when the `if` is the whole
+summand** — `simp [Finset.sum_ite_eq']` silently no-ops on
+`∑ x, c * (if x = a then 1 else 0) * g x` because a constant factor `c`
+(or a trailing `g x`) sits outside the indicator. The fix is to first
+factor the constant out with `← Finset.mul_sum`, then normalize each
+summand to `if x = a then (1 * g x) else 0` via `ite_mul` / `one_mul` /
+`zero_mul` (and `mul_ite` / `mul_one` / `mul_zero` for a leading
+factor), at which point `Finset.sum_ite_eq'` collapses it.
+
+Concretely (expanding a signed-indicator row
+`∑ x, b * (ite_v − ite_u) * m x` to `b * (m v − m u)`):
+
+```lean
+simp only [mul_assoc, ← Finset.mul_sum, mul_sub, sub_mul, ite_mul, one_mul,
+  zero_mul, Finset.sum_sub_distrib, Finset.sum_ite_eq', Finset.mem_univ, if_true]
+```
+
+The diagnostic that you've hit this: a `simp only [Finset.sum_ite_eq',
+…]` whose `Finset.sum_ite_eq'` argument the linter then flags as
+*unused* — the indicator never reached the collapsible shape. Reach for
+`← Finset.mul_sum` (constant factor) or restructure the summand before
+re-adding it.
+
+---
+
+## 11. Strong induction on a derived measure (`induction hN : m G using Nat.strong_induction_on`)
+
+To induct on a *derived* `ℕ` measure `m G` of an object `G` (a vertex
+count, an edge count, a rank, …) rather than a structural argument,
+the idiom is
+
+```lean
+intro G
+induction hN : m G using Nat.strong_induction_on generalizing G with
+| _ N IH =>
+  intro hG₁ hG₂   -- the hypotheses you didn't pre-`intro`
+  …
+```
+
+Two things to know:
+
+- **`generalizing G` is mandatory** — otherwise the IH is fixed to
+  the *current* `G` and is useless. The motive then quantifies over
+  every object of the measure's value, and the IH reads
+  `IH : ∀ k < N, ∀ G, m G = k → <hyps> → <goal>`.
+- **The IH carries the measure-equation `m G' = k` as an explicit
+  argument**, threaded *first*, before the object's own hypotheses.
+  So a recursive call on a smaller `G'` is
+  `IH _ hlt G' rfl hG'₁ hG'₂` (the `rfl` discharges `m G' = m G'`),
+  and the strict-decrease proof `hlt : m G' < N` uses `hN ▸ (the
+  measure-drop lemma)` to rewrite `N` back to `m G`. **Do not
+  `subst hN`** — `hN : m G = N` binds the abstract `N` the goal and
+  `IH` are stated against; substituting it re-expresses the goal in
+  `m G` and desyncs from `IH`'s `< N`. Keep `hN` and `rw [hN]` /
+  `hN ▸` locally where you need the concrete count.
+
+---
+
+## 12. Iterating `+1` around a cyclic `Fin m` (`Fin.ofNat`-based ℕ-induction)
+
+To turn a *consecutive* equality `∀ i : Fin m, f i = f (i + 1)` (the
+`+1` being cyclic `Fin m` addition) into a *global* one
+`∀ i, f i = f 0` — the "constant around a cycle" step — three obvious
+moves fail and one works:
+
+- `(j : Fin m)` for `j : ℕ` does **not** coerce: the parser reads it as
+  a type ascription, so you get *"Type mismatch: j has type ℕ but is
+  expected to have type Fin m"* (and `(↑j : Fin m)` / `Nat.cast` trip
+  *"failed to synthesize NatCast (Fin m)"* — the `NatCast` instance
+  wants the literal `n+1` shape, not `Fin m` under `[NeZero m]`).
+- `Fin.induction` is for `Fin (n+1)` with the **non-wrapping**
+  `Fin.succ : Fin n → Fin (n+1)`, a different operation from cyclic
+  `+1`.
+
+The idiom:
+
+```lean
+have hofNat : ∀ p : ℕ, Fin.ofNat m p + 1 = Fin.ofNat m (p + 1) := fun p => by
+  apply Fin.ext; simp [Fin.add_def, Nat.add_mod]
+have hnat : ∀ j : ℕ, f (Fin.ofNat m j) = f 0 := by
+  intro j
+  induction j with
+  | zero => rw [Fin.ofNat_zero]
+  | succ p ih => rw [← hofNat, ← hstep, ih]
+have := hnat i.val
+rwa [Fin.ofNat_val_eq_self] at this   -- Fin.ofNat m ↑i = i
+```
+
+`Fin.ofNat m : ℕ → Fin m` is the canonical (`[NeZero m]`) cyclic map;
+`Fin.ofNat_zero`, `Fin.ofNat_val_eq_self`, and the one-line `hofNat`
+successor fact (`Fin.ext` + `simp [Fin.add_def, Nat.add_mod]`, since
+both sides are `(p+1) % m`) are all you need. The cyclic index type
+`Fin m` *is* the cycle — no walk/connectivity primitive is required
+to chain the per-step equalities.
+
+---
+
+## 13. State a ℕ count `a − b + c` as `a + c − b` (subtraction last)
+
+When the conclusion of a lemma is a natural-number count of the form
+`a − b + c` (a residual after adding `c` and removing `b`), write it
+with the **subtraction last**: `a + c − b`. The two are equal in ℝ /
+ℤ but **not** in ℕ, where `−` truncates at `0`: at a boundary where
+`b > a` (so `a − b = 0`), `(a − b) + c` reads `c` while the intended
+value `a + c − b` is smaller. The failure shows up as the *statement*
+being off-by-one at an extreme case — and then `omega` can't prove
+it, because it's genuinely false in ℕ as written. Rule of thumb: do
+the additions first so the single truncating `−` lands on a
+provably-large-enough quantity (with `b ≤ a + c` available, `omega`
+closes the rearrangement against the un-truncated facts).
+
+---
+
+## 14. LI family of `finrank`-many vectors spans `⊤`
+
+To prove `Submodule.span R (Set.range v) = ⊤` from a
+`LinearIndependent R v` whose index `ι` has
+`Fintype.card ι = Module.finrank R V`, route through
+`basisOfLinearIndependentOfCardEqFinrank h hcard : Basis ι R V` (the
+LI family, having exactly `finrank`-many members, *is* a basis) and
+`Basis.span_eq`. Two gotchas: the basis needs `[Nonempty ι]` (supply
+it inline, e.g. `⟨⟨(0,1), by decide⟩⟩` for a subtype index), and
+`Basis.span_eq` produces `span (range ⇑(basisOf…)) = ⊤`, whose
+coercion is only *defeq* to `v` — finish by rewriting
+`coe_basisOfLinearIndependentOfCardEqFinrank` to turn `⇑(basisOf…)`
+back into `v` before the goal matches.
+
+When the LI family is **subtype-valued** (`v : ι → ↥S` for a
+submodule `S`) but the LI you have is on the coercion
+(`fun i => (v i : M)`), lift the independence across the inclusion
+with `(LinearMap.linearIndependent_iff S.subtype
+(Submodule.ker_subtype _)).1` — the `subtype ∘ v`-vs-`v` composite
+is defeq, so no `simp` glue is needed.
+
+---
+
+## 15. `(∑ i, f i).comp g` — go pointwise, there is no distributing simp lemma
+
+A `LinearMap` identity with a `∘ₗ` (or `.comp`) sitting *outside* a
+`Finset.sum` in the **left** argument —
+`(∑ i, c i • f i).comp g = ∑ i, c i • (f i).comp g` — does **not**
+fall to `simp [LinearMap.smul_comp, …]`: there is no
+`LinearMap.sum_comp`, and `map_sum` won't fire because `· ∘ₗ g`
+isn't recognized as the hom being mapped over the `∑`. Don't hunt
+for the distribution lemma.
+
+**Pattern.** Drop to pointwise evaluation:
+`LinearMap.ext fun x => ?_`, pull the hypothesis to `x` with
+`have hx := LinearMap.congr_fun h x`, then `simpa only
+[LinearMap.add_apply, LinearMap.comp_apply, LinearMap.sum_apply,
+LinearMap.smul_apply, <per-term collapse at x>,
+LinearMap.zero_apply] using hx`. The `sum_apply` pushes the `∑`
+inside, and each summand's `.comp` collapses by a named per-term
+lemma evaluated at `x` (supply it as `have e : ∀ j, … = … := fun j
+=> LinearMap.congr_fun (per_term_lemma …) x` if `simp` can't
+synthesize the endpoint side conditions).

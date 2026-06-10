@@ -61,10 +61,35 @@ pip install -r requirements.txt          # plastex, leanblueprint, invoke
 - **`_` in `\texttt{...}`.** LaTeX still treats `_` as a subscript
   inside `\texttt{...}`. Escape as `\_` (e.g.
   `\texttt{my\_function}`) or use `\verb|...|`.
+- **Non-ASCII subscript characters (`₀`, `₁`, …) outside math
+  mode.** xelatex Emergency-stops with *"`\check@icr` ... `l.N
+  <token>`"* when a Lean identifier carrying a unicode subscript
+  (e.g. `v₀`) appears in plain prose, even inside `\texttt{...}`.
+  Rewrite the prose to drop the subscripted token (e.g. "the
+  distinguished vertex $v_0$") or wrap the whole identifier in
+  math mode if the subscript-as-subscript is the point. The same
+  class of pasted-from-Lean glyphs — math-symbol-class
+  superscripts (`⁰`), subscript operators (`₊`, `₋`), combining
+  marks (macron `h̄`, tilde) — trips the same failure. The
+  Lean-side analogue (these are not valid identifier characters
+  either) lives in `../TACTICS-QUIRKS.md`.
 - **`\lean{Name1, Name2}` with multiple names** is fine for the
   HTML build (each links separately) but produces only one link
   target in the PDF. Reserve multi-name `\lean{}` for closely-
   related corner cases the reader genuinely thinks of as a unit.
+- **A literal `\lean{}` in prose poisons `lean_decls` and fails
+  `checkdecls`.** plastex executes the `\lean` macro wherever it
+  appears, including inside descriptive prose — e.g. a
+  forward-mode chapter preamble saying "each node gains a `\lean{}`
+  pointer". The empty argument is parsed as a one-element decl list
+  `['']`, and leanblueprint writes it as a blank line into
+  `lean_decls`; `checkdecls` then resolves `"".toName =
+  Name.anonymous`, prints ` is missing.` (note the leading space —
+  empty name), and exits 1. It stays *silent* while the chapter has
+  no real `\lean{}` entries (the lone blank is a trailing line
+  `IO.FS.lines` drops), then surfaces the moment the first real
+  entry lands after it. Fix: never write a bare `\lean{}` in prose —
+  use `\texttt{\textbackslash lean}` to typeset the macro name.
 - **Math in section / subsection titles breaks `inv bp` (xelatex).**
   hyperref errors with *"Improper alphabetic constant"* and
   Emergency-stops the run when a section title contains raw
@@ -76,6 +101,17 @@ pip install -r requirements.txt          # plastex, leanblueprint, invoke
   *next* `inv web` (because `print.bbl` never got generated and
   copied to `src/web.bbl`); fix the section title and re-run `inv
   bp` then `inv web`.
+- **Unicode letters in math mode break `inv bp` (xelatex).** A raw
+  Unicode glyph in a math expression — e.g. pasting a Lean identifier
+  like `ιMulti` into `$\mathrm{ι Multi}$` — Emergency-stops the run with
+  *"Missing character: There is no ι (U+03B9) in font
+  [lmroman10-regular]"*. The `lmroman` math font has no Greek-letter
+  glyphs at those codepoints. `inv web` (plastex) tolerates the same
+  glyph, so this only surfaces on the PDF pass. Fix: don't typeset Lean
+  identifiers in prose at all (the `\lean{}` pin already links them);
+  if you genuinely need the symbol, use its TeX command (`\iota`, not
+  `ι`). Same failure mode and cascade as the math-in-titles entry above
+  (a failed `inv bp` leaves the next `inv web` with no `print.bbl`).
 - **No `.md` interference.** plastex parses only what `web.tex`
   `\input{}`s. xelatex parses only what `print.tex` `\input{}`s.
   Adding `.md` files anywhere under `blueprint/` is safe.

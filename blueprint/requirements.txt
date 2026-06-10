@@ -1,4 +1,5 @@
-invoke==1.7.1
+# invoke >= 2.0 required: 1.x's vendored `six` breaks on Python >= 3.12.
+invoke>=2.0
 plasTeX @ git+https://github.com/plastex/plastex.git
 leanblueprint @ git+https://github.com/PatrickMassot/leanblueprint.git
 watchfiles==0.16.1

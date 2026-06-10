@@ -41,10 +41,17 @@ argument; you only pass one project-name string.
 
 - **Infrastructure**: lakefile, lean-toolchain, .gitignore, .mcp.json,
   GitHub Actions workflows (build/lint, mathlib hopscotch, dependabot),
-  blueprint build rig, home_page Jekyll skeleton.
+  blueprint build rig, home_page Jekyll skeleton, Apache-2.0 `LICENSE`.
 - **Process docs**: `CLAUDE.md` (root + per-subdirectory), `ROADMAP.md`,
   `DESIGN.md`, `CLEANUP.md`, `TACTICS-GOLF.md`, `TACTICS-QUIRKS.md`,
-  `notes/Phase1.md` scaffold.
+  `MODULE-SYSTEM.md` (read-on-demand), `blueprint/AUTHORING.md`
+  (read-on-demand), `notes/Phase0.md` scaffold (Phase 0 = write the
+  informal blueprint end-to-end before any Lean).
+- **Project metadata**: `formalization.yaml` skeleton (the
+  [mathlib-initiative self-reporting
+  schema](https://github.com/mathlib-initiative/formalization.yaml));
+  filled in incrementally from day one and synced at phase
+  boundaries per CLAUDE.md.
 - **A working `lake build` target**: a placeholder `Basic.lean` module
   so `lake build` succeeds out of the box. Delete and replace once
   the project has real content.
@@ -63,11 +70,17 @@ argument; you only pass one project-name string.
      or delete the placeholder.
    - `blueprint/src/chapter/intro.tex` — replace `{{THEOREM_NAME}}`
      placeholder content with a real introduction; flesh out the
-     phase plan.
+     phase plan. Delete the "Replace this paragraph ..." placeholder
+     comments — they have survived instantiation before.
    - `home_page/index.md` — replace placeholders with real status
      prose.
+   - `formalization.yaml` — fill the `project` and `sources` sections
+     now; the rest accretes at phase boundaries (the file documents
+     its own upkeep cadence).
 3. **First Lean session**: `lake exe cache get && lake build` to warm
-   the mathlib cache and verify the placeholder builds.
+   the mathlib cache and verify the placeholder builds. Then commit
+   the generated `lake-manifest.json` — it pins the resolved
+   mathlib/checkdecls revisions for CI and the next clone.
 4. **First blueprint build** (optional, requires the one-time setup in
    `blueprint/SETUP-AND-PITFALLS.md`):
    ```sh
@@ -77,10 +90,20 @@ argument; you only pass one project-name string.
    inv bp && inv web
    ```
 5. **Push to GitHub** to verify CI green and Pages deploy succeeds.
+   For `hopscotch.yml` (mathlib bump PRs), create a repo secret named
+   `ci` containing a PAT with `repo` scope — PRs opened with the
+   default `GITHUB_TOKEN` don't trigger CI, so bump PRs would sit
+   "pending" forever.
+6. **Open Phase 0** per `notes/Phase0.md`: write the entire informal
+   blueprint (statements, prose proofs, `\uses{}` edges — no
+   `\lean{}` / `\leanok`) before any Lean. The dep-graph then doubles
+   as the project's to-do list, and later ROADMAP phase sections cite
+   blueprint labels instead of speculative lemma names.
 
 ## Components you may want to remove
 
-The template includes everything CombinatorialRigidity used. Some of
+The template includes everything its ancestor projects
+(CombinatorialRigidity, enharmonic) used. Some of
 these may be over-engineering for a smaller experiment:
 
 - **`hopscotch.yml`** — daily mathlib bump cron. Useful for
@@ -99,7 +122,8 @@ these may be over-engineering for a smaller experiment:
 ## What the template does *not* include
 
 - A `lake-manifest.json`. Generated on first `lake build`; let lake
-  produce it against the toolchain version pinned in `lean-toolchain`.
+  produce it against the toolchain version pinned in `lean-toolchain`,
+  then commit it (see step 3 above).
 - A `.refs/` directory for reference PDFs (gitignored convention only).
 - `notes/FRICTION.md` or `notes/PERFORMANCE.md` — created lazily once
   there's content for them.

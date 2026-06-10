@@ -37,6 +37,15 @@ Per-phase work logs live under `notes/`.
 friction review, and the `notes/PhaseN.md` template. Human contributors can
 skim it but the primary audience is automated tooling.
 
+## Metadata
+
+Sources, status, automation setup, and fidelity notes for this
+formalization are recorded in [`formalization.yaml`](formalization.yaml),
+following the
+[formalization.yaml](https://github.com/mathlib-initiative/formalization.yaml)
+self-reporting schema. It is kept current at phase boundaries (see
+`CLAUDE.md`).
+
 ## Build
 
 ```

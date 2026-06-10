@@ -24,6 +24,9 @@ progress, and what's next. The canonical hand-off lives in
 [`ROADMAP.md`](https://github.com/{{GITHUB_USER}}/{{project-name}}/blob/master/ROADMAP.md);
 this page is the public-facing summary.
 
+Provenance, process, and faithfulness metadata are recorded in
+[`formalization.yaml`](https://github.com/{{GITHUB_USER}}/{{project-name}}/blob/master/formalization.yaml).
+
 ## Phases
 
 The Lean code is divided into phases tracked in `ROADMAP.md`. List

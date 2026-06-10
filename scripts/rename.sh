@@ -119,22 +119,35 @@ Next steps:
   2. Fill in narrative content per TEMPLATE.md "After running the
      rename script": README.md, ROADMAP.md, DESIGN.md, CLAUDE.md
      project-history note, blueprint/src/chapter/intro.tex,
-     home_page/index.md.
+     home_page/index.md, formalization.yaml (project/sources/status
+     sections).
 
-  3. Initialize git (if not already):
+  3. Delete template residue so it doesn't need a dedicated cleanup
+     commit later (each of these survived instantiation in practice):
+       - TEMPLATE.md (once you've followed its checklist)
+       - the "Replace this paragraph ..." placeholder comments in
+         blueprint/src/chapter/intro.tex
+       - the "TODO: project-history paragraph." line in CLAUDE.md
+
+  4. Initialize git (if not already):
        git init && git add -A && git commit -m "Initial scaffold from template"
 
-  4. First Lean build:
+  5. First Lean build:
        lake exe cache get && lake build
 
-  5. (Optional) First blueprint build — see blueprint/SETUP-AND-PITFALLS.md
-     for one-time setup.
+     Then commit the generated lake-manifest.json — it pins the
+     resolved mathlib/checkdecls revisions so CI and the next clone
+     are reproducible.
 
-You can delete TEMPLATE.md once the project is on its feet.
+  6. (Optional) First blueprint build — see blueprint/SETUP-AND-PITFALLS.md
+     for one-time setup.
 EOF
 
-# 4. Self-delete.
+# 4. Self-delete, and remove the scripts/ directory if that leaves it
+#    empty (an orphan empty scripts/ dir was real post-instantiation
+#    residue).
 rm -- "$0"
+rmdir "$SCRIPT_DIR" 2>/dev/null || true
 EOF_MARKER=1
 # (The EOF_MARKER line above is a no-op safeguard against accidental
 #  truncation: if the file is ever cut short, the `rm "$0"` line is

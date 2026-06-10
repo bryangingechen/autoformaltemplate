@@ -35,3 +35,7 @@ jobs:
           dependency: mathlib
           to: master       # mathlib's default branch
           pr-base: master  # this repo's default branch
+          # A PAT (repo scope) stored as the `ci` secret. Without it the
+          # action falls back to GITHUB_TOKEN, and PRs opened with that
+          # token do NOT trigger CI — bump PRs would sit forever "pending".
+          github-token: ${{ secrets.ci }}

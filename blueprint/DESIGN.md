@@ -7,8 +7,8 @@ and open questions about the workflow.
 
 It is the blueprint's analogue of the top-level `DESIGN.md` — notes
 and discussion rather than operational rules. Operational rules
-(authoring conventions, static checks, local build) live in
-`blueprint/CLAUDE.md`.
+(static checks, local build) live in `blueprint/CLAUDE.md`;
+authoring conventions live in `blueprint/AUTHORING.md`.
 
 ## What the blueprint is for
 
@@ -137,7 +137,10 @@ Categories that are typically **excluded**:
 - **Mirror lemmas under `{{PROJECT_NAME}}/Mathlib/`.** These are
   upstream-eligible facts about mathlib types. They are not project
   results; they belong upstream (and are tracked separately by the
-  upstreaming dashboard).
+  upstreaming dashboard). Excluded from the *main-line* chapters
+  only — they land in per-module appendix chapters instead; see
+  `blueprint/AUTHORING.md` *Blueprint appendices for mirror
+  modules*.
 - **Small bridge / glue lemmas.** Anything whose name or statement
   is likely to change as the API stabilizes. These are the
   **highest-churn** artefacts in the codebase, and including them in

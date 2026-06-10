@@ -9,57 +9,129 @@ For **golfing / improvement** patterns (turning a verbose proof into
 an idiomatic one), see `TACTICS-GOLF.md` instead — read at cleanup
 time, not first-draft.
 
-> **`{{PROJECT_NAME}}/CLAUDE.md`** carries an inline
-> symptom-indexed pointer table at the top — when a build fails,
-> that table is the first place to skim. The table's bullets point
-> at the sections below for the fix.
-
 > **Friction vs. idiom.** Cross-cutting rules — "if you see pattern
 > X, prefer Y" — live here. One-shot frictions (a specific lemma we
 > needed and mirrored) live in `notes/FRICTION.md`.
 
-## Sections
+## Symptom index (skim this first)
 
-1. **`omega`/`grind` treat `set`-aliased terms as opaque atoms**
-2. **`omega` doesn't carry commutativity or distributivity** on
-   opaque atoms — pre-normalize.
-3. **`subst` between two free variables picks the wrong one** —
-   use named hyp + `rw`.
-4. **`simp only` leaves residual subterms that block `rw` motives** —
-   insert `change`.
-5. **`set name := fun t => …` + `simp [name]` doesn't unfold lambdas** —
-   prefer `let` + explicit `have` lemmas.
-6. **`interval_cases` is for free variables, not function applications** —
-   derive the equation via `omega` and name it.
-7. **Dot notation only consults the type's head namespace** —
-   sub-namespace lookup and same-name wrapper traps.
-8. **`simp_all` can cross-contaminate with destructive equality
-   hypotheses** — route through a derived quantity.
-9. **Subscript `₊` (U+208A) is not a valid identifier character** —
-   use alphanumeric suffix.
-10. **`termination_by` / `decreasing_by` elaboration rescue** —
-    explicit typeclass binding on the def, named def params over
-    pattern-match binders, `_h`-prefixed `if h :` binders to silence
-    the unused-variable lint.
-11. **`match h : <expr> with | pat => …` substitutes `expr ↦ pat` in
-    the *goal* of each branch** — return `rfl` when the goal collapses
-    to `pat = pat`, or restructure to `by_contra` + `cases h_eq : …`.
-12. **`rw [h]` over a structure field whose value appears in another
-    local's type** — motive failure. Build the rewritten Finset
-    equality via `Finset.ext`, then `rw` the equation as a unit.
-13. **`induction … using funName.induct` on a function with `let` in
-    its body** — name the `let`-bound case-binder; `dsimp only at h`
-    after `rw [funName] at h` to inline the inner-let shadow; use
-    `nomatch h` (not `Option.noConfusion`) to discharge
-    match-with-`none`-discriminee contradictions.
-14. **`ring` fails on alpha-renamed `Finset.sum`s — `omega` /
-    `linarith` as atom extractor** — bind each sum identity as a
-    named `have` and close the surrounding linear (in)equality with
-    `omega` / `linarith`; both treat each `Finset.sum` as an opaque
-    ℕ / ordered-field atom, sidestepping `ring`'s lambda-body
-    syntactic-identity check.
-15. **`#eval`-bearing `module` files need `public meta import` for
-    the imported `Decidable` / elaboration instances**.
+When a `lake build` fails with an unfamiliar Lean error, scan these
+bullets. If one matches, jump to the named section below for the fix.
+
+- `omega`/`grind` fails despite hypotheses that should bridge →
+  check for `set`-aliased terms (§ 1) or for commutativity /
+  distributivity that needs pre-normalization (§ 2)
+- *"Unknown identifier X"* after `rcases ⟨rfl, rfl⟩` or `subst`
+  between two free vars → § 3 *`subst` between two free variables
+  picks the wrong one*
+- *"motive is not type correct"* after `simp only`, citing a
+  hypothesis not in the displayed goal → § 4 *`simp only` leaves
+  residual subterms*
+- `simp [name]` on a `set`-bound lambda doesn't unfold (or `⊢ sorry
+  () c = …` glitch) → § 5 *`set name := fun … + simp [name]`*
+- `interval_cases (Fintype.card V)` won't close by `rfl` → § 6
+  *`interval_cases` is for free variables*
+- `And.foo not found` / `SubNamespace.X.foo not found` via dot
+  notation, or *"Invalid field `foo`"* on `x.foo` while `T.foo x`
+  type-checks in the same file → § 7 *Dot notation only consults
+  the type's head namespace*
+- `simp_all` produces a confusing residual with a hypothesis you
+  expected to eliminate → § 8 *`simp_all` cross-contaminates*
+- `set V₊ := …` / `let V₊ := …` / `let h̄ := …` / `let h⁰ := …` (or
+  any identifier with `₊ ₋ ₌`, a combining-mark like macron `̄` or
+  tilde `̃`, or a math-class superscript like `⁰`) errors with
+  *"expected token"* at the non-ASCII column → § 9 *Subscript `₊`
+  (U+208A) is not a valid identifier character*
+- *"MVar does not look like a recursive call: ... → V → Fintype V"*
+  on a WF-recursive def whose `termination_by` uses `Finset.univ`,
+  or *"Unknown identifier `visited`"* from `termination_by` after a
+  `| visited, v => ...` pattern-match body, or `unused variable`
+  lint on an `if h : ...` binder used only inside `decreasing_by` →
+  § 10 *`termination_by` / `decreasing_by` elaboration rescue*
+- *"Application type mismatch: heq has type X = some ⟨…⟩ but is
+  expected to have type some ⟨…⟩ = some ⟨…⟩"* inside the `some`
+  branch of a `match heq : <expr> with | …` term → § 11 *`match h :
+  <expr> with` substitutes `expr ↦ pat` in the goal of each branch*
+- *"Tactic `rewrite` failed: motive is not type correct"* when
+  `rw [h]` uses `h : D.field = …` and the goal contains a local
+  whose *type* references `D.field` → § 12 *`rw [h]` over a
+  structure field whose value appears in another local's type*
+- *"Application type mismatch"* on the first hypothesis used inside
+  a `case caseN D h₁ ... =>` after `induction _ using funName.induct`,
+  or *"Did not find an occurrence of the pattern"* on a `rw [hyp] at
+  h` whose LHS visibly appears in `h` → § 13 *`induction … using
+  funName.induct` on a function with `let` in its body*
+- `ring` reports *"unsolved goals"* on a sum-of-sums identity
+  `Σ + B = B + Σ'` where `Σ` and `Σ'` are alpha-equivalent
+  `Finset.sum`s (same Finset and body, different bound-variable
+  name) → § 14 *`ring` fails on alpha-renamed `Finset.sum`s*
+- *"Invalid `meta` definition `_eval`, `instFoo` is not accessible
+  here; consider adding `public meta import X`"* on a `#eval
+  (decide P)` in a `module` file → § 15 *`#eval`-bearing `module`
+  files need `public meta import`*
+- *"unknown tactic"* on a bare `ring` / `linarith` / `nlinarith` /
+  `positivity`, or *"Unknown constant `Finset.mul_sum`"* /
+  *"Unknown constant `Finset.sum_comm`"* on a `simp only` / `rw`
+  step, or *"Invalid field `det`: The environment does not contain
+  `Function.det`"* on `(M : Matrix n n ℝ).det` despite
+  seemingly-sufficient imports → § 16 *Mathlib basic-files don't
+  transitively pull tactic / big-operator-algebra /
+  matrix-determinant modules* (see the need → import table there)
+- *"invalid -D parameter, unknown configuration option
+  'linter.style.header'"* (or any lakefile-set `linter.*` / `pp.*`
+  option reported unknown) on a file that previously built → § 17
+  *a `/-! … -/` module docstring placed above the `import` block
+  truncates the header*
+- *"Function expected"* / *"Application type mismatch"* when a
+  standalone `have` restates a subterm that type-checks fine in the
+  goal → § 18 *Restating a subterm in a standalone `have` can fail*
+- *"Type mismatch … has type `A ↔ ?` but is expected to have type
+  `A' ↔ …`"* on `refine h.trans ?_` where `A'` is only defeq to
+  `A`, or *"Did not find an occurrence"* on `rw [map_eq_zero_iff …]`
+  over a defeq-abbrev codomain → § 19 *`Iff.trans` requires a
+  syntactic side-match, not just defeq*
+- *"motive is not type correct"* / `._proof_N` debris in the goal
+  after `rw [someDef]` where `someDef` is a mathlib op built via
+  `.copy` → § 20 *use the `@[simps!]` lemmas, never `rw` the `def`*
+- `rw [if_pos rfl]` reports *"Did not find an occurrence"* on a
+  goal shaped `(fun i ↦ if i = j then …) j` → § 21 *use
+  `simp only [↓reduceIte]`*
+- *"typeclass instance problem is stuck … `(i : α) → Module ?m
+  (?φ i)`"* on a difference of `LinearMap.proj`s over a Pi type →
+  § 22 *type-ascribe the first summand to the full `LinearMap`
+  type*
+- *"the first type argument to `HSMul` is a metavariable"* at a
+  `t • _` under an unannotated `∀ t, …` binder → § 23 *ascribe the
+  binder's type*
+- `ext x` on an equation of duals of an exterior-power submodule
+  binds a generating-vector tuple, not a point of the carrier →
+  § 24 *apply `LinearMap.ext` explicitly*
+- *"motive is not type correct"* on `rw [hsub]` where the rewritten
+  `Submodule` sits under `finrank R ↥(…)` → § 25 *flip the equation
+  and rewrite the hypothesis instead*
+- `rw [map_sum]` reports *"Did not find an occurrence"* on
+  `b.repr (∑ …)`, or forcing it fails to synthesize
+  `AddMonoidHomClass` / times out → § 26 *route the coordinate
+  through `Finsupp.lapply t ∘ₗ repr.toLinearMap`*
+- `rw [← Cardinal.le_def]` reports *"Did not find an occurrence"*
+  on a `Nonempty (α ↪ β)` goal where `α` and `β` live in different
+  universes → § 27 *use `Cardinal.lift_mk_le'`*
+- *"(deterministic) timeout at `whnf`"* / *"maximum number of
+  heartbeats"* while unfolding a basis/dual-coordinate iso over a
+  heavy carrier in place, or while the elaborator infers a
+  heavy-carrier implicit argument → § 28 *extract a generic helper
+  over an abstract basis; pass heavy arguments explicitly*
+- the same `whnf`/`isDefEq` timeout on a rank-nullity step
+  (`finrank_range_add_finrank_ker`, `quotKerEquivRange`) over a
+  `Submodule` or quotient of a heavy carrier → § 29 *run
+  rank-nullity on the plain Pi map*
+- *"failed to synthesize `Module.IsTorsionFree …`"* (or any
+  "obvious" algebraic instance) in a narrow-import file when a
+  full-mathlib scratch succeeds → § 30 *add the instance's defining
+  import*
+- `rw [← f.sum_repr y]` (or any `rw` of a function-valued equation)
+  unexpectedly rewrites `y i` applications elsewhere in the goal →
+  § 31 *scope with `conv_lhs` / `conv_rhs` / `nth_rewrite`*
 
 ---
 
@@ -197,7 +269,7 @@ by_cases hV3 : 3 ≤ Fintype.card V
 
 ## 7. Dot notation only consults the type's head namespace
 
-Two related traps:
+Three related traps:
 
 - **Sub-namespace lookup fails.** Inside `namespace Foo.Bar`,
   with `h : G.IsP`, writing `h.some_lemma` looks up
@@ -213,6 +285,21 @@ Two related traps:
   *stated* type before unfolding), not the upstream `Bar.mono`
   you intended. Spell out the upstream name explicitly when
   wrapping a same-named upstream lemma.
+- **File-local re-namespace breaks projection.** A lemma written
+  `theorem T.foo …` while the file sits inside an enclosing
+  namespace (`namespace MyProject.Area`) lands at the full name
+  `MyProject.Area.T.foo`. A later `x.foo` on `x : T` then fails
+  with *"Invalid field `foo`: the environment does not contain
+  `T.foo`"* — even though `T.foo` *resolves as an identifier* (the
+  enclosing namespace is open). Dot/projection notation does
+  **not** use the open-namespace search: it looks for `foo` in the
+  *structure head's own root namespace*, and the file-local
+  `…Area.T.foo` is a different namespace. Fix: either call it by
+  the (partially-qualified) identifier `T.foo x` instead of the
+  projection, or define the lemma inside an explicit `namespace T
+  … end T` block so it really lands in the root `T` namespace.
+  Cheap tell: `x.foo` errors but `T.foo x` type-checks in the same
+  file.
 
 ---
 
@@ -243,9 +330,26 @@ subscripts (`₁ ₂ ₃ … ₀`) but classify `₊` (U+208A "subscript plus
 sign") as a math symbol, not a letter — it cannot continue an
 identifier. Same for `₋` (U+208B), `₌` (U+208C), `₍ ₎`.
 
-Replace with an alphanumeric suffix (`V_pos`, `Vpos`, `Vp`, `S`)
-when binding via `set` / `let` / `intro`. Blueprint prose can keep
-the `₊` notation; only the Lean identifier needs to change.
+The same XID_Continue rule rejects other math-symbol-class Unicode
+that's easy to paste from prose and looks like it should work:
+
+- **Superscript digits other than the identifier-eligible subset.**
+  Some compose-class superscripts (e.g. `⁰` U+2070) are classified
+  as numeric symbols rather than letters / continue-class digits, so
+  `h⁰` and similar bindings error the same way. Use `h0` instead.
+- **Combining marks like macron `̄` (U+0304) and tilde `̃` (U+0303).**
+  `h̄` is *not* a single codepoint — it's `h` + combining macron, and
+  the combining mark is not a continue character. `hbar`, `htilde`,
+  etc. work; the prose / blueprint can continue to render `\bar h`.
+
+Replace with an alphanumeric suffix (`V_pos`, `Vpos`, `Vp`, `hbar`,
+`h0`) when binding via `set` / `let` / `intro`. Blueprint / prose can
+keep the original `₊` / superscript / combining-mark notation; only
+the Lean identifier needs to change. Friction signal: any time the
+parser dumps the local context with a partial name and `expected
+token` at the column of a non-ASCII glyph that "looks like" a letter
+or digit, the Unicode XID_Continue classification is the first
+suspect.
 
 ---
 
@@ -539,3 +643,521 @@ visibility does the consumer need?*
 The alternative — dropping `module` for the `#eval`-bearing file —
 works (non-`module` files can `import` `module` files freely) but
 breaks the project's uniform module convention.
+
+---
+
+## 16. `ring` / `linarith` / `Finset.mul_sum` / `Finset.sum_comm` report *"unknown tactic"* or *"unknown constant"* despite a `Mathlib.Data.Real.Basic` import
+
+Mathlib's trend is to shrink the import surface of foundational
+files: `Mathlib.Data.Real.Basic` no longer transitively imports
+`Mathlib.Tactic.Ring`, `Mathlib.Algebra.BigOperators.Ring.Finset`,
+`Mathlib.Algebra.BigOperators.Group.Finset.Sigma`, etc. This is
+independent of the module system — it's just that "I have ℝ in
+scope, so `ring` should work" is no longer reliable.
+
+Symptoms, all from the same root cause:
+
+- *"unknown tactic"* at a bare `ring` / `linarith` / `nlinarith` /
+  `polyrith` / `positivity` / `field_simp` line.
+- *"Unknown constant `Finset.mul_sum`"* on a `simp only [...,
+  Finset.mul_sum, ...]` step.
+- *"Unknown constant `Finset.sum_comm`"* on a `rw [Finset.sum_comm]`
+  step.
+
+**Fix:** add the specific module directly. The relevant pinning:
+
+| Need | Import to add |
+|---|---|
+| `ring` / `ring_nf` | `Mathlib.Tactic.Ring` |
+| `linarith` / `nlinarith` | `Mathlib.Tactic.Linarith` |
+| `Finset.mul_sum`, `Finset.sum_mul`, `Fintype.sum_mul_sum` | `Mathlib.Algebra.BigOperators.Ring.Finset` |
+| `Finset.sum_comm`, `Finset.sum_sigma` | `Mathlib.Algebra.BigOperators.Group.Finset.Sigma` |
+| `Finset.sum_ite_eq`, `Finset.sum_ite_eq'` | `Mathlib.Algebra.BigOperators.Group.Finset.Piecewise` (typically transitively available; named here for completeness) |
+| `Matrix.det` (the `.det` projection on a `Matrix n n R`, and lemmas like `Matrix.isUnit_iff_isUnit_det`) | `Mathlib.LinearAlgebra.Matrix.NonsingularInverse` (the *invertibility* + Cramer's-rule lemmas live here; `Mathlib.LinearAlgebra.Matrix.Determinant.Basic` is enough for `Matrix.det` itself). Note that `Mathlib.LinearAlgebra.Matrix.ToLin` does **not** transitively pull this in — `(M : Matrix n n ℝ).det` errors as *"Invalid field `det`: The environment does not contain `Function.det`"* because `Matrix` is a `def` alias for `n → n → ℝ` and the elaborator falls through to the `Function`-head namespace when `Matrix.det` is not in the environment. |
+
+When in doubt, `lean_loogle` on the constant name reports its
+defining module under the `module` field of each hit.
+
+**Don't** chase this by importing `Mathlib` (the umbrella file) —
+it bloats compile time and obscures the genuine dependencies.
+
+---
+
+## 17. A `/-! … -/` module docstring above the `import` block truncates the header
+
+**Symptom.** `lake build` on a file fails with
+*"invalid -D parameter, unknown configuration option
+'linter.style.header'"* (or whichever `linter.*` option the
+lakefile's `leanOptions` set first) — on a file that built fine
+before a documentation-only edit, with no mention of the docstring
+in the error.
+
+**Cause.** The Lean parser ends the module *header* at the first
+non-`import` command. A `/-! … -/` module docstring is a command
+(unlike a plain `/- … -/` block comment, which is whitespace), so
+placing it above the imports makes the header empty: the file then
+imports nothing, Mathlib's linter framework is absent from the
+environment, and the lakefile-injected `-Dlinter.style.header=…`
+option is rejected as unknown. The reported error points at the
+option, not at the real problem.
+
+**Fix.** Put the docstring *after* the import block (the standard
+mathlib layout: copyright `/- … -/` comment, imports, `/-! # … -/`
+module docstring). Only plain block comments may precede `import`.
+
+---
+
+## 18. Restating a subterm in a standalone `have` can fail (`Function expected`) where the goal type-checks
+
+When a goal contains a subterm like
+`Pi.single (j e) v c x * m x c` (a `Pi.single`-indexed family of
+functions, applied at `c` then `x`), restating that **same** subterm
+inside a fresh `have`/`suffices` can fail with *"Function expected
+at `Pi.single …`"* or *"Application type mismatch"* — even though
+the goal itself elaborates fine.
+
+The cause: in the goal, the implicit motive of `Pi.single` (the
+family type, e.g. `Fin d → (α → ℝ)`) is **pinned** by the
+surrounding lemma that produced the term, whose statement fixed the
+family's type. Re-stating the subterm in isolation strips that
+context, so the elaborator must re-infer the motive from the literal
+expression alone — and picks the wrong one (treating a
+function-valued family member as the *value* rather than the
+*family member*).
+
+**Fix:** don't restate — operate on the goal in place, where the
+motive stays pinned. Use `rw [Finset.sum_congr rfl fun x _ => …]`,
+`rw [Finset.sum_eq_single …]`, or `simp only [...]` to transform
+the subterm directly. Observed in: collapsing an inner `Pi.single`
+sum inside a matrix-row computation — the standalone
+`have hinner : ∀ x, ∑ c, Pi.single … = …` failed to elaborate while
+the same collapse via `rw [Finset.sum_eq_single …]` on the goal
+worked.
+
+---
+
+## 19. `refine h.trans ?_` / `Iff.trans` requires a syntactic side-match, not just defeq
+
+When a helper iff `h : A ↔ B` is meant to bridge a goal `A' ↔ C`
+where `A'` is only *definitionally* equal to `A` (not
+syntactically), `refine h.trans ?_` fails with a *"Type mismatch …
+has type `A ↔ ?` but is expected to have type `A' ↔ …`"*.
+`Iff.trans` unifies its first component against the goal's LHS up
+to reducible transparency only, so the two must match
+*syntactically*; a `def`-unfolding or binder-shape difference
+defeats it. Typical offenders:
+
+- a wrapper-vs-base projection that is `rfl` but not syntactically
+  equal: `F.IsGood` vs `F.toBase.IsGood`, where the former
+  `def`-unfolds to the latter;
+- a dependent existential `∃ (_ : p), q` vs a conjunction-style
+  `p ∧ q` (both encode "`p` and `q`" but are different `Exists` /
+  `And` head symbols).
+
+**Fix:** don't compose with `.trans`. Open the goal iff with
+`constructor` and discharge each direction with `exact`, which
+closes up to full defeq — or, when one side already matches, `rw`
+the matching iff and then `constructor`.
+
+**Same rule for `rw` of a `map_eq_zero_iff`-family lemma when the
+codomain is a `def`-wrapper.** `rw [map_eq_zero_iff _ e.injective]`
+(or `LinearEquiv.map_eq_zero_iff`) pattern-matches `?f ?x = 0`
+*syntactically*; if the equiv's codomain is a defeq abbrev of the
+type in the goal, the displayed `(e ⋯) x` elaborated through that
+defeq and the `rw` reports *"Did not find an occurrence of the
+pattern"*. Apply the lemma as a **term** instead — e.g.
+`exact map_ne_zero_iff _ e.injective` after `rw`-ing the goal into
+the matching iff shape — since `exact` unifies up to defeq.
+
+---
+
+## 20. `rw` on a mathlib op defined via `.copy` trips the motive — use the `@[simps!]` lemmas
+
+Several mathlib operations are defined as a `.copy` of another
+construction so that a field is *definitionally* the intended set —
+e.g. `Graph.deleteEdges` is a `.copy` of a `restrict`, pinning the
+edge set to `E(G) \ F`. Unfolding such a def with
+`rw [deleteEdges]` (or `rw [IsLink, deleteEdges, …]`) exposes the
+`.copy` wrapper, and `rewrite` then fails with *"motive is not type
+correct"* / *"Did not find an occurrence of the pattern"*, because
+the goal now carries the `.copy` proof obligations
+(`deleteEdges._proof_2 …`) that abstract badly.
+
+**Fix:** never `rw` the `def` itself. `.copy`-built ops are
+typically `@[simps!]`-tagged, so the right tools are the
+**generated simp lemmas**, which `simp only` applies cleanly
+through the `.copy` — for `deleteEdges`:
+
+- `vertexSet_deleteEdges` — `V(G.deleteEdges F) = V(G)`;
+- `deleteEdges_isLink` — `(G.deleteEdges F).IsLink e x y ↔ G.IsLink e x y ∧ e ∉ F`;
+- `edgeSet_deleteEdges` — `E(G.deleteEdges F) = E(G) \ F`;
+- `deleteEdges_inc`, `deleteEdges_isLoopAt`, …
+
+Whenever an `rw [someDef]` leaves `._proof_N` debris in the goal,
+check whether `someDef` is built with `.copy` (or otherwise carries
+proof fields) and switch to its `simps` lemmas.
+
+---
+
+## 21. `rw [if_pos rfl]` fails on a `(fun i ↦ if i = j then …) j` goal — use `simp only [↓reduceIte]`
+
+**Symptom.** After `refine ⟨fun i => if i = j then … else …, …⟩` and
+a `subst`/`by_cases` landing in the `i = j` branch, the goal still
+shows the un-beta-reduced application
+`(fun i ↦ if i = j then A else B) j`. `rw [if_pos rfl]` reports
+*"Did not find an occurrence of the pattern"* — the `if` is hidden
+under an unapplied lambda, so there is no `ite` subterm at the
+syntactic surface for `rw` to match.
+
+**Fix.** `simp only [↓reduceIte]` does both the beta-reduction *and*
+the `if (j = j)` → `then`-branch reduction in one step (the
+`↓reduceIte` simproc fires after `simp`'s built-in beta). Plain
+`simp only [if_pos rfl]` also works but flags `if_pos` as an
+*unused* simp argument (the simproc did the reduction, not the
+lemma) — a `linter.unusedSimpArgs` warning. So reach for the simproc
+name `↓reduceIte`, not the lemma. The `else`-branch (`i ≠ j`) is
+unaffected: `simp only [if_neg hij]` fires there normally because
+the discriminant is a free `hij : ¬ i = j`, no beta-redex in the
+way.
+
+---
+
+## 22. `LinearMap.proj i - LinearMap.proj j` over a Pi type leaves the fiber/`R` stuck
+
+**Symptom.** A definition like
+
+```lean
+def diffAt (u v : α) : (α → W) →ₗ[ℝ] W := LinearMap.proj u - LinearMap.proj v
+```
+
+fails to elaborate with *"typeclass instance problem is stuck, it is
+often due to metavariables: `(i : α) → Module ?m (?φ i)`"*, even
+though the declared type pins both the domain `α → W` and codomain
+`W`. The `-` (over the `LinearMap` module) unifies the two `proj`
+summands' types with each other *before* either is unified against
+the declared codomain, so the Pi fiber family `?φ` and the scalar
+`?R` stay metavariables and the `Module` instance can't be
+synthesized.
+
+**Fix.** Type-ascribe the *first* summand to the full `LinearMap`
+type; the second then unifies against it:
+
+```lean
+def diffAt (u v : α) : (α → W) →ₗ[ℝ] W :=
+  (LinearMap.proj u : (α → W) →ₗ[ℝ] W) - LinearMap.proj v
+```
+
+`(R := ℝ)` on each `proj` alone is *not* enough — it pins the scalar
+but leaves the fiber family `?φ` stuck; the whole-LinearMap
+ascription is what fixes `?φ`. The companion `_apply` lemma is then
+not `rfl` (in a `module`-mode `public section` the `proj`
+subtraction doesn't reduce to the projection form): close it with
+`rw [LinearMap.sub_apply, LinearMap.proj_apply, LinearMap.proj_apply]`.
+
+---
+
+## 23. Unascribed `∀ t, … t • x …` binder leaves the `•` scalar type a metavariable
+
+**Symptom.** A statement of the form
+
+```lean
+theorem foo … : ∀ t, P = (… (fun i => a i + t • (0 : W)) …) := …
+```
+
+fails with *"typeclass instance problem is stuck: `HSMul ?m W W` …
+the first type argument to `HSMul` is a metavariable"* at the
+`t • …` position. The `∀ t,` binder gives `t` no type annotation,
+and nothing else in the body forces it (here `t • (0 : W)` with `W`
+fixed pins the *result* type but not the *scalar* type `?m`), so
+`t`'s type is undetermined when the `HSMul` instance is sought. The
+same trap fires for any `∀ x, … x • _ …` / `∀ x, f x _` where the
+binder's type is only weakly constrained by the body.
+
+**Fix.** Ascribe the binder: `∀ t : ℝ, …`. The single annotation
+propagates and the `HSMul ℝ W W` instance resolves. (Distinct from
+§ 22: there the *fiber/scalar of a `LinearMap` subtraction* was
+stuck; here it's the *bound variable's own type* that's free.)
+
+---
+
+## 24. `ext x` on an equation of duals of an exterior-power submodule descends too far
+
+**Symptom.** Proving an equation of `Module.Dual ℝ ↥(⋀[ℝ]^k M)`
+functionals — e.g. `∑ i, c i • r i = 0` where each
+`r i : Module.Dual ℝ ↥(⋀[ℝ]^k M)` — by `ext x` binds
+`x : Fin k → M` (the *generating-vector tuple* of the exterior
+power) instead of the intended point of the carrier, and the goal
+becomes a `LinearMap.compAlternatingMap … (exteriorPower.ιMulti ℝ k)
+x = …` between `AlternatingMap`s. A later `… x` / `congrFun … x`
+then errors with *"Application type mismatch: x has type
+`Fin k → M` but is expected to have type …"*. Cause: the dual is a
+`↥(⋀[ℝ]^k M) →ₗ[ℝ] ℝ`, and the generic `ext` tactic picks the
+exterior-power `AlternatingMap` ext lemma (which peels through
+`ιMulti` to the tuple of generators) over plain `LinearMap.ext`.
+
+**Fix.** Don't use the `ext` *tactic*; apply `LinearMap.ext`
+explicitly so the introduced point has the carrier type:
+
+```lean
+have hk : (∑ i, c i • r i : Module.Dual ℝ ↥(⋀[ℝ]^k M)) = 0 :=
+  LinearMap.ext fun x => by
+    simpa [LinearMap.sum_apply, LinearMap.smul_apply] using hval x
+```
+
+Relatedly, apply such a functional equation at a point with
+`LinearMap.congr_fun h x` rather than
+`congrFun (congrArg DFunLike.coe h) x` — the latter routes the RHS
+`0` through the universe-polymorphic `DFunLike.coe` and fails with
+*"numerals are data … the expected type is universe polymorphic and
+may be a proposition"*.
+
+---
+
+## 25. `rw [hsub]` over a `Submodule` equation under `finrank R ↥(…)` trips the motive — flip the equation and rewrite the *hypothesis*
+
+**Symptom.** A `Submodule`-valued equation `hsub : A = B` and a goal
+of the form `… finrank R ↥A … ≤ …`. Rewriting the goal with
+`rw [hsub]` fails with *"Tactic `rewrite` failed: motive is not type
+correct"*. Cause: the submodule `A` sits under the
+`↥`-coercion-to-type inside `Module.finrank R`, so the rewrite
+motive `fun S => Module.finrank R ↥S ≤ …` carries a dependent
+coercion `↥S` and is not type-correct in general (same family as
+§ 12 and § 20 — `rw` motive traps over dependent positions).
+
+**Fix.** When the matching fact lives in a *hypothesis*
+`hp : … finrank R ↥B … ≤ …` (a `≤`-Prop, not a position under a
+fresh motive), rewrite the hypothesis with the **reversed** equation
+and close by `exact`:
+
+```lean
+rw […, ← hsub] at hp   -- turns `↥B` in `hp` into `↥A`, matching the goal
+exact hp
+```
+
+Rewriting `at hp` rather than on the goal sidesteps the motive
+type-correctness check (the hypothesis's type is just a `Prop`). The
+general rescue axis: *if `rw [eq]` on the goal trips the motive but
+the same content is already in a hypothesis, flip `eq` and rewrite
+the hypothesis instead.*
+
+---
+
+## 26. `map_sum` won't push `Basis.repr` (a `LinearEquiv` to `Finsupp`) through a `∑` — route through `Finsupp.lapply t ∘ₗ repr.toLinearMap`
+
+**Symptom.** A goal carrying `b.repr (∑ i ∈ s, f i) t` (a single
+basis coordinate of a `Finset.sum`), and `rw [map_sum]` (or
+`simp only [map_sum]`, or a `conv` focused on the subterm) reports
+*"Did not find an occurrence of the pattern `?g (∑ x ∈ ?s, ?f x)`"*
+even though `b.repr (∑ …)` is visibly a morphism applied to a sum.
+Forcing the morphism explicitly (`rw [map_sum (b.repr)]`) instead
+fails with *"failed to synthesize `AddMonoidHomClass (M ≃ₗ[R] (ι →₀
+R)) ?m ?m`"* / *(deterministic) timeout at typeclass*. Cause: the
+codomain of `Basis.repr` is `Finsupp` (`ι →₀ R`), and the
+`AddMonoidHomClass` instance for the bundled `M ≃ₗ[R] (ι →₀ R)`
+(needed for `map_sum` to fire) does not synthesize — so `map_sum`
+silently won't unify `?g := b.repr`. The same snag blocks the
+`.toLinearMap` form `M →ₗ[R] (ι →₀ R)`.
+
+**Fix.** Don't push `repr` through the sum at all. The coordinate
+you actually want is the *`R`-valued* linear functional
+`Finsupp.lapply t ∘ₗ b.repr.toLinearMap` (codomain `R`, whose
+`map_sum` synthesizes fine). When the sum's terms are themselves a
+linear image (e.g. `L (c i • bs i)` for a `LinearEquiv` `L`), fold
+the outer linear maps into one composite and rewrite the whole
+coordinate to that composite by a `show … from rfl`, then `map_sum`
+fires:
+
+```lean
+rw [show b.repr (L (∑ i, c i • bs i)) t
+      = (Finsupp.lapply t ∘ₗ b.repr.toLinearMap ∘ₗ L.toLinearMap)
+          (∑ i, c i • bs i) from rfl,
+  map_sum]
+refine Finset.sum_congr rfl fun i _ => ?_
+rw [map_smul, smul_eq_mul, LinearMap.comp_apply, Finsupp.lapply_apply,
+  LinearMap.comp_apply]
+```
+
+The `show … from rfl` holds because `Finsupp.lapply t (g x) = (g x)
+t` definitionally; routing through the scalar-codomain composite is
+the whole trick (`Finsupp.lapply` is in
+`Mathlib.LinearAlgebra.Finsupp`). General axis: *a `map_sum` /
+`map_smul` that silently won't match a `Basis.repr`-of-a-sum is the
+`Finsupp`-codomain `AddMonoidHomClass` synthesis failing — compose
+with `Finsupp.lapply t` to drop the codomain to the scalar ring
+first.*
+
+---
+
+## 27. `Nonempty (α ↪ β)` from a cardinality bound across *different universes* — use `Cardinal.lift_mk_le'`, not `le_def`
+
+**Symptom.** You have `α` finite (or `#α ≤ #β`) and want an
+embedding `Nonempty (α ↪ β)`, and reach for
+`Cardinal.le_def : #α ≤ #β ↔ Nonempty (α ↪ β)`. The
+`rw [← Cardinal.le_def]` fails with *"Did not find an occurrence of
+the pattern `Nonempty (Function.Embedding.{?u+1, ?u+1} ?α ?β)`"* —
+because `le_def` requires `α β : Type u` in the **same** universe,
+but here e.g. `α : Type u_1` and `β : Type` (mathlib hands back
+certain index types in `Type 0` — observed with the index of a
+transcendence basis).
+
+**Fix.** Use the cross-universe form `Cardinal.lift_mk_le' :
+lift.{v} #α ≤ lift.{u} #β ↔ Nonempty (α ↪ β)` (stated for
+`{α : Type u} {β : Type v}`). `rw [← Cardinal.lift_mk_le']` then
+leaves a goal on lifted cardinals; close it with the `lift`-flavored
+cardinal lemmas (`Cardinal.lift_lt_aleph0`,
+`Cardinal.aleph0_le_lift`) rather than the un-lifted ones. General
+axis: *any cardinal comparison whose two sides live in different
+universes needs the `lift_*` companion lemma; the bare form is
+same-universe only.*
+
+---
+
+## 28. Unfolding a basis/dual-coordinate iso *in place* over a heavy carrier `whnf`-times-out — extract a generic helper over an abstract basis
+
+**Symptom.** A proof step computes a coordinate or matrix entry of a
+linear map through a basis-coordinate iso `φ : W ≃ₗ[R] (Fin n → R)`
+built from a *concrete, heavy* `W` (e.g. the dual of a Pi type over
+an exterior-power submodule), say
+`φ (f.dualMap (φ⁻¹ (Pi.single l 1))) j`. Unfolding `φ`
+(`dualBasis_equivFun`, `funCongrLeft_apply`, `dualMap_apply`, …)
+*in place* inside a large proof context hits *"(deterministic)
+timeout at `whnf`"* or *"at `isDefEq`, maximum number of
+heartbeats"* — the elaborator keeps reducing the heavy carrier
+type.
+
+**Fix.** Lift the coordinate/matrix-entry computation into a
+**standalone (`private`) lemma stated over an abstract
+`b : Basis ι R W`** (and `e : Fin n ≃ ι`, `f : W →ₗ[R] W`), with `φ`
+written `b.dualBasis.equivFun.trans (LinearEquiv.funCongrLeft R R
+e)`. Proven against the *abstract* basis it elaborates in isolation
+with no `whnf` on the concrete type; the call site then `rw`s in its
+concrete `φ`/`f` and is left with a lightweight goal (e.g.
+`b.dualBasis (e l) (f (b (e j)))`, a Kronecker `0`/`1` for a
+projection `f`). **The abstract restatement is the rescue, not a
+`set_option maxHeartbeats` bump** (which still times out). Note
+`Basis.equivFun`/`dualBasis` need `[Finite ι] [DecidableEq ι]` in
+the lemma *statement* (`haveI := Fintype.ofFinite ι` in the proof,
+else the `unusedFintypeInType` linter fires on a `[Fintype ι]`
+binder).
+
+**Call-site variant.** The same timeout fires when an
+`exact helper _ …` leaves a **heavy-carrier-typed argument
+implicit** and the elaborator must *infer* it by unifying the
+helper's conclusion against the goal — solving the metavariable
+reduces the heavy term. Fix: pass the heavy-carrier argument as an
+**explicit literal** so the match is syntactic, not search. Related
+corollary: prefer `fin_cases q` on a subtype directly over
+`obtain ⟨⟨i, j⟩, hij⟩ := q` + nested `fin_cases` — the latter leaves
+beta-redex artifacts in hypotheses that block `omega`.
+
+**Membership-witness variant.** The same timeout fires when a
+membership lemma whose hypothesis mentions a heavy wrapped term
+(`F.graph.IsLink …` for a heavy composite `F`) is invoked at a goal
+where the elaborator must unify a supplied plain fact (`G.IsLink …`)
+against the wrapped form. Fix: don't call the membership lemma —
+inline the membership witness as an anonymous constructor inside a
+local `have` helper that takes the plain fact as an *explicit
+argument* (a supplied witness is defeq-checked cheaply; an inferred
+goal is not).
+
+---
+
+## 29. Rank-nullity on a map into/out of a `Submodule`/quotient of a heavy carrier `whnf`-times-out — run it on the *plain Pi* map
+
+**Symptom.** A rank-nullity step
+`LinearMap.finrank_range_add_finrank_ker g` (or
+`g.quotKerEquivRange`, `Submodule.liftQ`,
+`(LinearMap.range g).finrank_le`, a `Submodule.ker g` fed to an
+`[AddCommGroup]`-requiring lemma) where `g`'s domain or codomain is
+a *`Submodule`* or a *`Submodule.Quotient`* over a heavy carrier
+(e.g. a Pi type over an exterior-power submodule) hits
+*"(deterministic) timeout at `whnf`/`isDefEq`"* — even at a huge
+`maxHeartbeats`. `Submodule` / `Submodule.Quotient` each carry an
+`AddCommMonoid` instance *separate* from their `AddCommGroup`;
+`LinearMap`/`mkQ` record the `AddCommMonoid`, while the
+rank-nullity lemma wants `AddCommGroup.toAddCommMonoid`. The two are
+defeq but only via a `whnf` that recursively reduces the heavy
+carrier — so the *normally trivial* monoid-vs-group reconciliation
+blows up.
+
+**Fix.** Run the rank-nullity on the map whose **domain and codomain
+are plain Pi function types** (`α → W`), never a
+`Submodule`/quotient. Concretely:
+
+- keep the cut as a *full* map out of the Pi type (don't
+  `.comp …subtype`-restrict to a `Submodule` domain):
+  `finrank_range_add_finrank_ker` on the Pi domain dodges the
+  diamond;
+- make the codomain a *single* `Submodule.pi` quotient
+  (`(ι → W) ⧸ N`), **not** a pi of fiber quotients `∀ i, W ⧸ p i` —
+  the single quotient is one `Submodule.Quotient` instance, light
+  enough for `finrank_range_add_finrank_ker`; split it to the
+  fiber-quotient product *only* for the finrank count, via
+  `Submodule.quotientPi` + `Module.finrank_pi_fintype` (import
+  `Mathlib.LinearAlgebra.Quotient.Pi`);
+- recover the restricted statement with
+  `Submodule.finrank_sup_add_finrank_inf_eq` +
+  `(ker ⊔ S).finrank_le` against the full Pi finrank — all on
+  `Submodule`s of the *Pi* type, no map-instance reconciliation.
+
+This is the same medicine as § 28 (the heavy carrier must stay out
+of the elaborator's `whnf`), here applied to instance-diamond
+reconciliation rather than a basis-coordinate unfold. **A
+`maxHeartbeats` bump is not the fix — it still times out.**
+
+---
+
+## 30. An "obvious" algebraic instance fails to synthesize in a narrow-import file — add the instance's defining import
+
+**Symptom.** Proving `LinearIndependent K (fun _ : Unit => x)` (or
+any subsingleton-indexed family) from `x ≠ 0` via
+`LinearIndependent.of_subsingleton (default) hx0` fails in a
+narrow-import file with *"failed to synthesize
+`Module.IsTorsionFree K M`"* — even though `K` is a `DivisionRing` /
+`Field`, where the family obviously is independent. A full-mathlib
+scratch (`lean_run_code`, `#eval`) masks the gap: it imports the
+instance transitively, so the same `exact` succeeds there and only
+fails once dropped into the actual (mirror) file.
+
+**Cause.** `LinearIndependent.of_subsingleton` is stated over
+`[IsDomain R] [Module.IsTorsionFree R M]`. For a division-ring
+module the instance is `DivisionSemiring.to_moduleIsTorsionFree`,
+which lives in `Mathlib.Algebra.Module.Torsion.Field` — **not**
+reachable from `Mathlib.LinearAlgebra.LinearIndependent.Basic` +
+`Mathlib.LinearAlgebra.Span.Basic` alone.
+
+**Fix.** Add the import that defines the instance (here `public
+import Mathlib.Algebra.Module.Torsion.Field`, the smallest carrier).
+Alternatives that avoid the import sometimes exist at the cost of a
+line (here `LinearIndependent.of_subsingleton' (i) (fun r hr =>
+(smul_eq_zero.1 hr).resolve_right hx0)`, the zero-ring-safe variant
+needing no torsion-free instance). **General rule:** when a mirror /
+narrow-import file fails to synthesize an "obvious" algebraic
+instance (`IsTorsionFree`, `NoZeroSMulDivisors`, …) that a
+full-mathlib scratch finds, the instance's *defining import* is
+missing — add it, don't reach for `set_option`.
+
+---
+
+## 31. `rw [← f.sum_repr y]` (or any `rw [eq]` rewriting a *function* term) hits the function's partial applications too — target the side with `conv`
+
+**Symptom.** Rewriting a function-valued term — e.g.
+`rw [← (Pi.basisFun R η).sum_repr y]` to expand `y` in its basis —
+unexpectedly blows up the *other* side of the goal: a clean RHS
+`∑ i, x i * y i` becomes
+`∑ i, x i * (∑ j, repr y j • basisFun j) i`, and the proof no longer
+closes. The rewrite was meant to touch only the standalone `y`.
+
+**Cause.** `rw [eq]` rewrites *every* occurrence of `eq`'s LHS as a
+*term*, and a bare function name `y : η → R` is a term that also
+occurs inside each partial application `y i`. So `← sum_repr y`
+matches the `y` in `y i` and rewrites it, not just the standalone
+`y` you had in mind.
+
+**Fix.** Scope the rewrite to one side:
+`conv_lhs => rw [← (Pi.basisFun R η).sum_repr y]` (or `conv_rhs`,
+`nth_rewrite k`). **General rule:** when an `rw` of an equation
+whose LHS is a *function-valued* term over-rewrites, the unintended
+hits are its partial applications elsewhere in the goal — narrow
+with `conv_lhs`/`conv_rhs`/`nth_rewrite` rather than re-stating the
+lemma.

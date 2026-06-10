@@ -18,5 +18,15 @@ blueprint/web/
 # Local-only reference PDFs (papers pulled for citation verification).
 .refs/
 
-# Personal Claude Code harness setup (slash commands, settings).
-.claude/
+# macOS Finder metadata.
+.DS_Store
+
+# Personal Claude Code harness setup (settings) — but ship the project
+# slash commands under .claude/commands/: they carry workflow lessons
+# that must propagate to instantiated projects. (A bare `.claude/`
+# ignore here once meant coordinate-phase.md silently never reached
+# projects instantiated from the template.) The leading `!.claude/`
+# also overrides any user-global `**/.claude` exclude.
+!.claude/
+.claude/*
+!.claude/commands/

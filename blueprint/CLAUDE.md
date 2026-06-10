@@ -8,11 +8,15 @@ four-way split:
 - `../CLAUDE.md` (root, always loaded) — project-wide process: reading
   order, hand-off contract, citations, project history.
 - `../{{PROJECT_NAME}}/CLAUDE.md` — Lean source ops: build/lint
-  gates, friction review, MCP tool guidance, quirks index.
+  gates, friction review, MCP tool guidance, file-size triggers.
 - `../notes/CLAUDE.md` — phase-notes and friction-log discipline.
-- This file — blueprint TeX ops: authoring conventions, static checks
-  (including `checkdecls`), local builds (`inv bp` / `inv web`),
-  dep-graph spot-check, forward-mode mechanics.
+- This file — blueprint TeX ops: static checks (including
+  `checkdecls` and the honesty / supersession gates), local builds
+  (`inv bp` / `inv web`), dep-graph spot-check, forward-mode
+  mechanics. Authoring conventions (annotation order, label
+  prefixes, cross-references, citations, what to include vs. skip,
+  appendices for mirror modules, proof verbosity) live in
+  `blueprint/AUTHORING.md` (read-on-demand).
 
 Read this file when a session involves writing or revising blueprint
 TeX — typically when a new phase lands and needs a chapter, or when an
@@ -26,202 +30,27 @@ rules; `DESIGN.md` carries the rationale.
 
 At session start, in order:
 
-1. **This file** — process and authoring conventions.
-2. **`blueprint/DESIGN.md`** — workflow modes and selectivity
+1. **This file** — operational rules for the blueprint (static
+   checks, local build, file layout, friction review).
+2. **`blueprint/AUTHORING.md`** — read-on-demand reference for
+   prose authoring conventions (annotation order, label prefixes,
+   cross-references, citations, what to include vs. skip,
+   appendices for mirror modules, proof verbosity). Consulted when
+   writing a new chapter, adding/updating an entry, opening a
+   mirror-module appendix, or settling a "does this lemma deserve
+   a blueprint entry?" question. Not auto-loaded.
+3. **`blueprint/DESIGN.md`** — workflow modes and selectivity
    rationale. Skim once per project; re-read when the workflow mode
    for a phase is under discussion.
-3. **`../ROADMAP.md`** — what's done, what's mid-stream, which phase
+4. **`../ROADMAP.md`** — what's done, what's mid-stream, which phase
    the new chapter (if any) corresponds to.
-4. **`../notes/PhaseN.md`** for the chapter being written — gives the
+5. **`../notes/PhaseN.md`** for the chapter being written — gives the
    lemma checklist, definitions, decisions made during the phase.
-5. **The Lean files themselves** for the relevant phase (skim doc-
+6. **The Lean files themselves** for the relevant phase (skim doc-
    comments, file headers, and main lemma statements). Doc-comments
    often already contain the prose proof or rationale, ready to be
    adapted.
-6. **Existing chapters** under `src/chapter/` — match their style.
-
-## Authoring conventions (carleson-style)
-
-The blueprint follows the convention used by
-[fpvandoorn/carleson](https://github.com/fpvandoorn/carleson/blob/master/blueprint/src/)
-and other leanblueprint projects. Key rules:
-
-### Annotation order inside each environment
-
-```latex
-\begin{lemma}[Short descriptive title]
-  \label{lem:my-lemma}
-  \lean{Namespace.my_lemma}
-  \leanok
-  \uses{def:foo, lem:bar}
-  Statement of the lemma, in mathematical English.
-\end{lemma}
-\begin{proof}
-  \leanok
-  \uses{lem:helper-used-in-proof-only}
-  One- to three-sentence mathematical proof, in English.
-\end{proof}
-```
-
-- `\label{...}` first; everything else cross-references it.
-- `\leanok` says "this is formalized in Lean."
-- `\lean{Fully.Qualified.Name}` links to the API docs. May contain
-  multiple comma-separated names for group lemmas (e.g. corner
-  cases).
-- `\uses{...}` on the **statement** declares the dependencies of the
-  statement; `\uses{...}` on the **proof** declares dependencies of
-  the argument. The dep-graph distinguishes them.
-- Always write a prose proof alongside `\leanok` — don't degenerate
-  to leanok-only stubs. The dep-graph is the formal map; the prose
-  is the human map.
-
-#### Sorry-blocked statements
-
-A theorem whose Lean declaration exists but whose body is `sorry`
-(typical for forward-mode work, or for downstream phases stated in
-an upstream chapter) is encoded as:
-
-```latex
-\begin{theorem}[...]
-  \label{thm:my-theorem}
-  \lean{Namespace.my_theorem}   % the Lean declaration exists
-  \uses{...}                    % dep edges to its statement-level deps
-  Statement.
-\end{theorem}
-\begin{proof}
-  Sketch of the intended proof, in prose.
-\end{proof}
-```
-
-i.e. `\lean{...}` is kept (the symbol resolves; the API doc page
-exists), but `\leanok` is omitted on **both** the theorem environment
-and the proof. The dep-graph then colors the node red. Carleson's
-convention is to rely on this absence-of-`\leanok` signal alone; no
-`\notready` macro is needed.
-
-### Label prefixes
-
-Use semantic prefixes consistently:
-- `def:` for definitions
-- `lem:` for lemmas
-- `thm:` for theorems
-- `cor:` for corollaries
-- `prop:` for propositions
-- `sec:` for sections
-
-This makes `\Cref{}` output read naturally
-("Definition 1.2", "Lemma 3.4") thanks to `cleveref`.
-
-### Cross-references
-
-Use `\cref{...}` / `\Cref{...}` (cleveref), never bare `\ref`. Both
-`print.tex` and `web.tex` load cleveref with `capitalize`, so
-`\Cref{lem:foo}` produces "Lemma 1.2" with the right capitalization.
-
-### Citations
-
-The blueprint loads a BibTeX bibliography from `src/bibliography.bib`
-in both entry points (`print.tex`, `web.tex`) with the `amsalpha`
-style. Cite published work with `\cite{key}`, combining multiple
-citations with comma separation: `\cite{tayWhiteley1985,jordan2016}`.
-
-Key convention: `firstAuthorYear` for single-author works
-(`laman1970`), camelCased authors for multi-author works
-(`tayWhiteley1985`, `graverServatiusServatius1993`).
-
-Top-level `CLAUDE.md → Referencing prior work` has the accuracy bar.
-For the blueprint specifically:
-
-- **Before adding a new bib entry**, verify title, authors,
-  journal/series, volume, year, and page range against a primary
-  source — DOI landing page, publisher metadata, or NASA ADS for
-  older journals. Don't copy from second-hand citations without
-  cross-checking.
-- **Match attribution to who proved it.** When the modern
-  presentation matters, name both: *"classical strategy of X--Y
-  YEAR, in the modern presentation of Z YEAR §2.2"*.
-- **Verify any §N pointers** — §N must exist in the cited work and
-  contain what you claim. Drop the section pointer rather than
-  guess.
-
-`leanblueprint pdf` (CI) and `inv bp` (local) drive `latexmk`, which
-runs `bibtex` and produces `print/print.bbl`. `inv bp` also copies
-that file to `src/web.bbl` so the subsequent `inv web` plastex run
-renders the bibliography page and resolves in-prose `\cite{}`s. Both
-formats use the same `amsalpha` style, so labels like `[TW85]`,
-`[Jor16]` are stable across formats.
-
-### What to include vs. skip
-
-**Be selective.** The blueprint is a reader's doc for a human
-audience, not a 1:1 mirror of the Lean. A typical Lean file has
-many small declarations that don't merit a blueprint entry. The
-default presumption is *exclude*; only include declarations that
-clear one of the bars below.
-
-- **Include**:
-  - Definitions of project-level concepts.
-  - Theorems a reader would name out loud.
-  - Lemmas with non-trivial mathematical content used at a phase
-    boundary or feeding a main theorem.
-- **Skip**:
-  - Pure tautologies that follow immediately from a definition.
-  - Constructors / accessors whose only job is to absorb
-    membership or And-projection boilerplate. The fact they prove is
-    already legible from the type signature.
-  - Mirror lemmas under `{{PROJECT_NAME}}/Mathlib/` — these are
-    upstream-eligible facts. They belong upstream, not in the
-    blueprint.
-  - Small bridge / glue lemmas whose names or statements are likely
-    to change as the API stabilizes. These are also the highest-
-    churn artefacts, and blueprinting them means re-editing the
-    blueprint on every Lean refactor.
-- **Group**: closely related corner cases under one `\begin{lemma}`
-  with multiple comma-separated names in `\lean{...}`.
-- **Phase-N-prep lemmas that live in Phase-M files** still belong
-  in the chapter for **file M**, not phase N. The blueprint reader
-  cares about the formal landscape, not about which agent-session
-  added a given lemma.
-
-Heuristic that captures most of the above: *if the lemma's name or
-statement is likely to change as the API stabilizes, that's a sign
-it's churn-prone internal infrastructure — skip it.* See
-`blueprint/DESIGN.md` for the rationale.
-
-### Proof verbosity
-
-Match the carleson style: one to three sentences, in English, that
-gesture at the argument without trying to be exhaustive. A reader who
-wants the full proof clicks through to the Lean. Examples:
-- Trivial: "Immediate from the definition."
-- Short: a one-sentence sketch of the key step.
-- Multi-step: ~10 lines for the most detailed proofs in a chapter.
-
-**First make Lean as painless as the math; only then add prose
-asides.** When a math step turns out harder to formalize than to
-state, the *first* response is to fix the Lean: a better proof
-strategy, an upstreamable helper, sharper mathlib tactic /
-proof-automation use. Only when those attempts fail do we add a brief
-prose aside calling out the residual gap. "The Lean is just verbose"
-is a smell, not a fact of life — friction we accept in the blueprint
-we also accept in the Lean, and the next phase pays for it.
-
-**Be honest about formalization cost.** Don't formalize Lean-tactic
-noise into the prose — the math should read as math. But once the
-Lean-simplification attempts above are exhausted, don't elide the
-residual *substantive* formalization cost either: if a one-line math
-step still expands to a named infrastructure lemma or a non-obvious
-construction in Lean, note that briefly so the prose is a faithful
-map of the formal proof, not a polished version that pretends Lean
-was easy. Use judgment:
-
-- *Omit*: `omega` / `grind` automating arithmetic the prose already
-  shows; `simp` collapses; type-class elaboration; mathlib-level
-  glue that's invisible to the math.
-- *Note*: hand-rolled `Equiv`s for type-level "canonical" moves; a
-  named project-internal helper standing in for what the prose treats
-  as a one-step correspondence; case-splits the Lean had to take that
-  the math wouldn't.
+7. **Existing chapters** under `src/chapter/` — match their style.
 
 ## Static checks before commit
 
@@ -245,29 +74,25 @@ The bundled command — and the one to use by default — is:
 blueprint/verify.sh        # runs inv bp, inv web, lake exe checkdecls
 ```
 
-The script handles the cd/PATH/venv plumbing (computes the repo root
-from its own location, falls back to `/Library/TeX/texbin` only if
-`xelatex` isn't already on `PATH`), so it works from any cwd. Its
-final step is `lake exe checkdecls blueprint/lean_decls`; that step
-**prints nothing on success** — silence after the `==> lake exe
-checkdecls …` banner is the green signal, not a missing output.
-Non-zero exit + diagnostic on failure (the failing `\lean{...}` name
-is named in the output).
+The script handles cd/PATH/venv plumbing and works from any cwd; its
+final `checkdecls` step **prints nothing on success** (silence after
+the `==> lake exe checkdecls` banner = green; non-zero + the failing
+`\lean{...}` name on failure). Longhand when the script can't apply:
+`( cd blueprint && source .venv/bin/activate && inv bp && inv web )`
+then `lake exe checkdecls blueprint/lean_decls`. CI runs the same
+check (`docgen-action`); a missing-declaration failure is a hard
+merge blocker. Most common cause: a missing enclosing `namespace` in
+the `\lean{...}` pointer (`Foo.Bar.IsP.foo`, not `Foo.IsP.foo`).
 
-The longhand, for when the script can't apply (a half-broken venv,
-manual debug iteration, etc.):
-
-```sh
-( cd blueprint && source .venv/bin/activate && inv bp && inv web )
-lake exe checkdecls blueprint/lean_decls   # exit 0, no output, = all names resolve
-```
-
-CI runs the same `checkdecls` command (via `docgen-action`) after
-`leanblueprint web` regenerates `lean_decls`; a missing-declaration
-failure is a hard merge blocker. The most common cause is forgetting
-an enclosing `namespace Foo` in the `\lean{...}` pointer — e.g.
-declarations inside `namespace Bar` need `Foo.Bar.IsP.foo`, not
-`Foo.IsP.foo`.
+**Last-line sentinel for `tail`-friendly monitoring.** Success prints
+`blueprint/verify.sh: all gates passed.` as the last line; any failure
+prints `blueprint/verify.sh: FAILED at <step> (exit <rc>).` via an
+`EXIT` trap. `tail -1 <log>` is enough to tell pass from fail, which
+matters because `verify.sh 2>&1 | tail -N` swallows verify.sh's
+non-zero exit code by default (bash pipelines return the rightmost
+command's exit, so `tail` clobbers the script's status unless the
+caller also runs `set -o pipefail`). The sentinel makes that mistake
+visible from the output alone.
 
 **All `\uses{...}` and `\Cref{...}` labels are defined:**
 
@@ -295,6 +120,138 @@ comm -13 /tmp/cite-keys.txt /tmp/bib-keys.txt  # entries never cited
 ```
 
 Both `comm` outputs should be empty.
+
+**No live-route node references a superseded one (the supersession
+gate).** When a commit supersedes a route or argument — replaces a
+chain of `\uses`'d nodes with a different one — it **owns reconciling
+every node on the old route, both statement and proof, in the same
+commit**, not merely marking the dead *leaf* and updating the live
+node's statement. The failure mode this catches is a *live* node
+whose statement says "route X is superseded" while its **proof still
+routes through X**: self-inconsistent prose that falls through every
+other gate (the honesty gate fires only on `\leanok` additions; the
+per-commit re-read checks only what the commit changed, not
+downstream red nodes; "superseded" in free prose alone has no
+machine-readable status). The discipline:
+
+- **Mark superseded nodes with a greppable, standardized marker.** Put
+  the literal word `superseded` in the **environment title** — the
+  `[...]` of `\begin{lemma}[...]` (e.g. `[Splice route (superseded):
+  …]`). The title is the one line a one-environment-per-block `awk`
+  can key on; restating it in the body prose (*"Red, superseded"*) is
+  good for the reader but the **title** is what the check below
+  greps. Keep the dead node (retain-with-marker) for the audit trail
+  rather than deleting it — but make it inert.
+- **A node still on a live route may not `\uses` (nor describe its
+  live proof through) a superseded node.** Reroute its `\uses` edges
+  and its prose onto the replacement in the *same* commit. A `\cref{}`
+  *pointer* to a superseded node in an explicit audit-trail aside
+  ("the earlier dead-ends, off the live route, are …") is fine; a
+  `\uses` dependency edge or a live-proof step is not.
+- **superseded-`\uses`-superseded is fine** — that is the internally
+  consistent audit trail. The gate flags only a *non-superseded* node
+  reaching into a superseded one.
+
+The scriptable form (same documented-one-liner style as the
+resolution checks above): enumerate superseded labels (title contains
+`superseded`; the `\label{}` is on the next line, the project's
+invariant `\begin`/`\label` adjacency), then assert no non-superseded
+node's `\uses` targets one. Two small `awk` passes feed a `comm`:
+
+```sh
+# Stage 1 — superseded labels (title carries the marker; \label is the next line).
+awk 'BEGIN{IGNORECASE=1}
+ /\\begin\{(lemma|theorem|proposition|corollary|definition)\}\[/{e=1;s=($0~/superseded/)}
+ e&&/\\label\{/{if(s){match($0,/\\label\{[^}]+\}/);l=substr($0,RSTART,RLENGTH);
+   gsub(/\\label\{|\}/,"",l);print l} e=0;s=0}' chapter/**/*.tex chapter/*.tex \
+ | sort -u > /tmp/sup-labels.txt
+# Stage 2 — labels reached by a \uses of a NON-superseded env (statement or proof;
+# \uses bodies may wrap, so accumulate to the closing }). A \begin[...] resets the
+# live flag; a \begin{proof} (no [title]) inherits the preceding env's flag.
+awk 'BEGIN{IGNORECASE=1;live=1;u=0}
+ /\\begin\{(lemma|theorem|proposition|corollary|definition)\}\[/{live=($0!~/superseded/);u=0;b=""}
+ {ln=$0; if(u)b=b ln; else{i=index(ln,"\\uses{"); if(i>0){u=1;b=substr(ln,i+6)}}
+  if(u){j=index(b,"}"); if(j>0){body=substr(b,1,j-1);u=0;b="";
+   if(live){n=split(body,a,",");for(k=1;k<=n;k++){gsub(/[ \t\r\n]/,"",a[k]);
+     if(a[k]!="")print a[k]}}}}}' chapter/**/*.tex chapter/*.tex \
+ | sort -u > /tmp/live-uses.txt
+comm -12 /tmp/sup-labels.txt /tmp/live-uses.txt    # should be empty
+```
+
+Any output is a live node depending on a struck one — reconcile it
+before commit. (If your shell lacks `**` globbing, list the chapter
+dirs explicitly. Calibration, one ancestor project: a live node's
+statement said "route superseded" while its proof still routed
+through the dead chain — rot that survived for phases because it
+lived in *red* nodes invisible to the `\leanok`-gated honesty gate.)
+
+**Every hypothesis of a `\leanok` node is discharged (the honesty
+gate).** The checks above are name/label *resolution* checks — they
+are blind to hypothesis *content*, and `checkdecls` happily passes a
+`\lean{...}` declaration carrying any number of smuggled hypotheses
+as long as the name exists. This gate is the semantic companion, and
+it is the one a human must run by eye on any commit that **adds a
+`\leanok`** (it is not scriptable, because "load-bearing vs ambient"
+is a judgement call). The rule:
+
+> A node may carry `\leanok` only if **every non-ambient hypothesis**
+> of its `\lean{...}` declaration is either (a) discharged inside the
+> Lean proof body, or (b) the *conclusion* of a node it `\uses{...}`.
+> A load-bearing hypothesis that is neither — a dangling assumption
+> with no node representing the obligation to prove it — means the
+> node is **dishonestly green**. Keep it red (drop `\leanok`, keep
+> `\lean{...}`) until the hypothesis is discharged or given its own
+> tracked node.
+
+"Ambient" = the lemma's genuine input data and typeclass/finiteness
+assumptions (`[Fintype V]`, "Let $G$ be a graph with property P",
+the input placement). "Load-bearing" = a hypothesis that *is* a
+mathematical claim the lemma would otherwise have to prove. The
+legitimate **green-modulo-X** pattern is exactly case (b): a node is
+honestly green when its hypothesis *is* the conclusion of a `\uses`'d
+node that stays red until discharged. The failure mode is case (b)
+*claimed* but not *true* — a `\uses` edge that doesn't actually
+conclude the hypothesis.
+
+**Producer / existence lemmas get extra scrutiny.** A node whose
+statement promises to *produce* something (`∃ p, …`, "attains full
+rank") but whose Lean *assumes* the very object or bound it
+claims to produce is the textbook smell — the deliverable smuggled in
+as a hypothesis. (Calibration, one ancestor project: a realization
+lemma shipped green while assuming the very placement it was named to
+construct; the fix was to drop `\leanok`, keep the proven composition
+carrier, and add a red node for the construction.) The between-phases
+re-run of this gate is `CLEANUP.md` §A — but this is a *per-commit*
+gate, run at the moment `\leanok` is added, not a debt deferred to a
+cleanup round.
+
+The gate has a *second half* — constructibility — and it is the one
+that bites producers: even with every hypothesis honest, the intended
+**proof step may not follow** or the **target count the construction
+can't reach**. Before a producer node is scheduled as a *build*,
+trace its target quantity (rank/count/dimension) through the
+construction and confirm the **arithmetic closes** — not just that
+`\uses` edges type-check; math-first when the math is the hard part.
+(Calibration: a one-line `+(D−1)` vs `+D` shortfall once sat
+undetected under four re-plans.) The recon discipline for this lives in
+`../DESIGN.md` *Constructibility recon before scheduling a producer
+build*.
+
+The gate has a *third half* — structural fidelity. The second half
+confirms the **arithmetic** closes; this one confirms the **shape**
+does. When a `\leanok` (or to-be-built) node formalizes a step of a
+published proof, its **composition lemma must reproduce the source's
+argument *structure***, not just its conclusion and count. A
+locally-sound modelling choice can re-express the source's argument
+as a *different* one with a different — possibly intractable —
+obligation. **The tell:** the counts line up but you keep needing
+fresh hypotheses to bridge a gap the source doesn't have.
+**Corollary:** a node that is *green with its hard half deferred as a
+red sibling* must have that red sibling's feasibility **re-verified
+before downstream nodes build on the green half** —
+"green-with-a-red-sibling" ≠ "green". See `../DESIGN.md` *Match the
+source's argument structure, not just its conclusion* for the
+project-side rule.
 
 ## Local build
 
@@ -349,11 +306,23 @@ before commit* above. The standalone `inv` targets above remain the
 right tool for iterative debugging.
 
 After `inv web`, **open `blueprint/web/dep_graph_document.html`** in a
-browser. This is the unique value-add over plain LaTeX: every node
-should be green (formalized) for completed phases, with edges showing
-the `\uses{}` dependencies. A missing or red node is the signal
-something's off — a typo in `\lean{...}`, a missing `\leanok`, or a
-broken `\uses{...}`.
+browser. This is the unique value-add over plain LaTeX: for completed
+phases every node should be **green-background** (proof formalized) —
+ideally dark-green (proof + all ancestors formalized) — with edges
+showing the `\uses{}` dependencies.
+
+Read the node coloring at two levels (see `AUTHORING.md` *Dep-graph
+node colors*): the **border** tracks the statement, the **background**
+tracks the proof. So scan for two failure modes, not one:
+
+- A **red** node = no `\leanok` anywhere (statement not formalized);
+  the usual cause is a typo in `\lean{...}` or a broken `\uses{...}`.
+- A **blue-background** node = statement `\leanok` present (green
+  border) but the **proof** `\leanok` is missing inside
+  `\begin{proof}`. The per-commit gates won't catch this — they check
+  `\lean{}` resolution, not node color — so a completed-phase chapter
+  full of blue-background nodes is a real divergence, not "done." Add
+  the proof-level `\leanok` per the `AUTHORING.md` template.
 
 ### CI
 
@@ -368,6 +337,7 @@ fails the whole pipeline.
 ```
 blueprint/
 ├── CLAUDE.md            ← this file (operating manual)
+├── AUTHORING.md         ← authoring conventions (read-on-demand)
 ├── DESIGN.md            ← workflow-mode rationale
 ├── SETUP-AND-PITFALLS.md ← one-time setup + symptom-indexed pitfalls
 ├── .gitignore           ← build artefacts + .venv/
@@ -387,8 +357,11 @@ blueprint/
     │   └── web.tex      ← web-only packages and overrides
     └── chapter/
         ├── main.tex     ← top-level `\input{}` orchestration
-        └── intro.tex    ← project introduction (phase plan, reading
-                            guide, hyperlinks to live docs)
+        └── intro.tex    ← reader's introduction: scope, phase plan,
+                            reading guide, hyperlinks to live docs.
+                            A fixed-size orientation, NOT a status
+                            log — keep it jargon-free (../CLAUDE.md
+                            *Sync the user-facing status surfaces*).
 ```
 
 ### Adding a new chapter
@@ -432,6 +405,13 @@ backfill at the end. The affected chapter spends a few commits with
 selected nodes red until their Lean catches up; this is forward-mode
 discipline applied to an existing chapter rather than a new one.
 
+**Keep reshape/phase history out of the prose.** Per-layer scheduling
+("was `some D'`", "Layer 4b") and Lean-internal plumbing (`Quot.out`,
+agreement witnesses) are changelog — a restated node must read as if
+its *current* shape were always the shape; state any
+computable/`noncomputable` split in one sentence and click through
+for the rest.
+
 ### Macros
 
 Live in `preamble/common.tex`. The starting set is intentionally
@@ -474,8 +454,8 @@ Concrete questions, in either mode:
    so an unexamined gap is technical debt.
 3. **Did selection feel arbitrary?** If you spent time deciding
    whether a given Lean lemma deserves a blueprint entry, write the
-   criterion you ended up using as a one-line note in this file
-   under "Authoring conventions → What to include vs. skip". The
+   criterion you ended up using as a one-line note in
+   `blueprint/AUTHORING.md` under *What to include vs. skip*. The
    next agent shouldn't relitigate the same call.
 
 No new entries this session is fine — but only after you've checked.

@@ -7,7 +7,8 @@ the project's Lean source. It auto-loads when an agent reads any
 Top-level `../CLAUDE.md` covers project-wide process (reading order,
 hand-off contract, citations, project history). This file carries
 the Lean-specific discipline: build/lint gates, friction review,
-MCP tool guidance, and the symptom-indexed quirks index.
+MCP tool guidance, and pointers into the symptom-indexed quirks
+reference (`../TACTICS-QUIRKS.md` *Symptom index*).
 
 For the blueprint side (TeX, dep-graph, `checkdecls`, `inv bp`/`inv
 web`), see `../blueprint/CLAUDE.md`. For notes/phase-log discipline,
@@ -18,81 +19,24 @@ see `../notes/CLAUDE.md`.
 In addition to the project-wide reading order in `../CLAUDE.md`:
 
 - **`../TACTICS-QUIRKS.md`** — rescue reference, symptom-indexed.
-  Skim the section titles at session start (they're enumerated in
-  the [Quirks index](#quirks-index-skim-this-first) below). When a
-  build fails with an unfamiliar Lean error, the inline index below
-  is the first place to look.
+  Skim its **Symptom index** at session start. When a build fails
+  with an unfamiliar Lean error, that index is the first place to
+  look — the bullets map error symptoms to the named § for the fix.
 - **`../TACTICS-GOLF.md`** — golfing / improvement reference. Read
   at cleanup time (when the `simplify` skill fires, or when
   shrinking/polishing a proof before commit), **not** during
-  first-draft writing.
+  first-draft writing — *except* the first-draft-shaping closers
+  flagged below (*Reach for stronger tactics during first-draft
+  writing*) and § 4 (Lean LSP MCP — see *Lean LSP MCP — reach for
+  it* below).
 - **`../notes/FRICTION.md`** — optional skim for an open
   upstream-eligible item to land alongside the session's main work.
-
-## Quirks index (skim this first)
-
-When a `lake build` fails with an unfamiliar Lean error, scan these
-bullets. If one matches, jump to the named section of
-`../TACTICS-QUIRKS.md` for the fix:
-
-- `omega`/`grind` fails despite hypotheses that should bridge →
-  check for `set`-aliased terms (§ 1) or for commutativity /
-  distributivity that needs pre-normalization (§ 2)
-- *"Unknown identifier X"* after `rcases ⟨rfl, rfl⟩` or `subst`
-  between two free vars → § 3 *`subst` between two free variables
-  picks the wrong one*
-- *"motive is not type correct"* after `simp only`, citing a
-  hypothesis not in the displayed goal → § 4 *`simp only` leaves
-  residual subterms*
-- `simp [name]` on a `set`-bound lambda doesn't unfold (or `⊢ sorry
-  () c = …` glitch) → § 5 *`set name := fun … + simp [name]`*
-- `interval_cases (Fintype.card V)` won't close by `rfl` → § 6
-  *`interval_cases` is for free variables*
-- `And.foo not found` / `SubNamespace.X.foo not found` via dot
-  notation → § 7 *Dot notation only consults the type's head
-  namespace*
-- `simp_all` produces a confusing residual with a hypothesis you
-  expected to eliminate → § 8 *`simp_all` cross-contaminates*
-- `set V₊ := …` / `let V₊ := …` (or any identifier with `₊ ₋ ₌`)
-  errors with *"expected token"* at the subscript column → § 9
-  *Subscript `₊` (U+208A) is not a valid identifier character*
-- *"MVar does not look like a recursive call: ... → V → Fintype V"*
-  on a WF-recursive def whose `termination_by` uses `Finset.univ`,
-  or *"Unknown identifier `visited`"* from `termination_by` after a
-  `| visited, v => ...` pattern-match body, or `unused variable`
-  lint on an `if h : ...` binder used only inside `decreasing_by` →
-  § 10 *`termination_by` / `decreasing_by` elaboration rescue*
-- *"Application type mismatch: heq has type X = some ⟨…⟩ but is
-  expected to have type some ⟨…⟩ = some ⟨…⟩"* inside the `some`
-  branch of a `match heq : <expr> with | …` term — § 11 *`match h :
-  <expr> with` substitutes `expr ↦ pat` in the goal of each branch*
-- *"Tactic `rewrite` failed: motive is not type correct"* when
-  `rw [h]` uses `h : D.field = …` and the goal contains a local
-  whose *type* references `D.field` — § 12 *`rw [h]` over a
-  structure field whose value appears in another local's type*;
-  build the rewritten container equation via `Finset.ext` and `rw`
-  the equation as a unit.
-- *"Application type mismatch"* on the first hypothesis used inside
-  a `case caseN D h₁ ... =>` after `induction _ using funName.induct`,
-  or *"Did not find an occurrence of the pattern"* on a `rw [hyp] at
-  h` whose LHS visibly appears in `h` — § 13 *`induction … using
-  funName.induct` on a function with `let` in its body*; name the
-  `let`-bound parameter in the case-binder list, and apply `dsimp
-  only at h` after `rw [funName] at h` to inline the inner `let`.
-- `ring` reports *"unsolved goals"* on a sum-of-sums identity
-  `Σ + B = B + Σ'` where `Σ` and `Σ'` are alpha-equivalent
-  `Finset.sum`s (same Finset and body, different bound-variable
-  name) — § 14 *`ring` fails on alpha-renamed `Finset.sum`s*; bind
-  each sum identity as a named `have` and close the surrounding
-  linear (in)equality with `omega` / `linarith`, both of which
-  treat each `Finset.sum` as an opaque atom.
-- *"Invalid `meta` definition `_eval`, `instFoo` is not accessible
-  here; consider adding `public meta import X`"* on a `#eval (decide
-  P)` (or any `#eval` synthesising an instance from a sibling
-  `module` file) — § 15 *`#eval`-bearing `module` files need `public
-  meta import` for the imported `Decidable` / elaboration instances*:
-  keep `public import X` for compile-time visibility and add a
-  second-form `public meta import X` for meta-time visibility.
+- **`../MODULE-SYSTEM.md`** — operational reference for converting
+  a project file to Lean's module system (`module` + `public import`
+  + `@[expose] public section`), including the constraints /
+  gotchas / `backward.privateInPublic` technical-debt rules. Read on
+  demand — when converting a file or debugging a `module`-related
+  build failure — not as session-start orientation.
 
 ## Starting a Lean-touching session
 
@@ -113,108 +57,85 @@ decidability, etc. — the authoritative list is in
 - When you add a lemma, put it in the file that introduces the
   relevant *definition*, not the file that first uses it.
 
-## Module-system conversion
+## File-size signals (in-phase structural triggers)
 
-Project files use Lean's module system (`module` + `public import`
-+ `@[expose] public section`) for the same reason mathlib does:
-downstream files only see the public interface of an imported
-module, not its full elaboration state. The mechanic is uniform
-across all files and matches the upstream reference
-`Mathlib/Analysis/InnerProductSpace/PiL2.lean`.
+A phase file approaching **~2000 lines or ~40 declarations** is a
+likely signal that one or more mathlib-affinity-distinct theories
+are getting bundled into a single file. (An ancestor project let a
+phase file reach 5600+ lines / 87 declarations before noticing —
+past the point where smell-sweeping in place could work.)
 
-When converting a new file, or when fixing a file that drifted out
-of the pattern:
+**Trigger.** When the active phase file crosses ~2000 lines or ~40
+declarations, **pause before adding the next decl** and run a
+classification walk on what's already there:
 
-1. **After the copyright block, insert a blank line then `module`.**
-   ```
-   /-
-   …
-   -/
-   module
-   ```
-2. **Rewrite every `import X` to `public import X`** — both upstream
-   mathlib imports and project-internal imports
-   (`{{PROJECT_NAME}}.Mathlib.X`, `{{PROJECT_NAME}}.Y`).
-3. **Between the doc block (`/-! … -/`) and the first
-   `open`/`namespace`/declaration, insert an unnamed `@[expose]
-   public section`.** Example:
-   ```
-   /-! # Title … -/
+- Walk each non-trivial declaration; for each, ask whether the
+  statement and proof use any project-specific hypothesis (a
+  project structure, a project predicate, etc.).
+- If no — the declaration is parameterised entirely by abstract
+  inputs (`Submodule`, `Matrix`, `Finset`-sum, `ContDiff`, etc.) —
+  it is mirror-eligible and belongs under
+  `{{PROJECT_NAME}}/Mathlib/<exact upstream path>`. Open the mirror
+  module in the same commit as the decl that would have crossed
+  the threshold, not as a post-phase cleanup round.
+- If yes — but the project-specific hypothesis is mechanical (e.g.
+  the lemma's body is "unfold definition, apply abstract lemma")
+  — the abstract part lifts to a mirror; the project-specific
+  wrapper stays in the phase file.
+- If the classification surfaces a clean exposition seam (e.g.
+  two coherent sub-theories sharing one file) — open a sibling
+  exposition file (`{{PROJECT_NAME}}/<topic>.lean`) in the same
+  commit as the decl that would have crossed it.
 
-   @[expose] public section
+The cost of a mid-phase split is one careful commit; the cost of a
+post-phase restructure is a multi-task cleanup round (an ancestor
+project's post-phase round ran six splits + matching blueprint
+appendices, spread across many sessions). The asymmetry is the
+whole reason for the trigger.
 
-   namespace Foo
-   ```
-   The section is unnamed and closes implicitly at end-of-file — no
-   matching `end` is needed. Existing `namespace X / end X` pairs
-   stay paired as before.
+**The same classification applies at chain-opening time, not only
+at threshold.** When opening a substantive mirror chain — a family
+of upstream-eligible lemmas planned to land under a single mirror
+file across multiple commits — run the classification on the
+*planned* sub-lemmas before landing the opener. If they classify to
+**≥2 distinct upstream destinations** (e.g. some algebraic, some
+topological, some analytic), split at opening — the threshold rule
+otherwise fires later and the cleanup is still owed.
 
-Constraints and gotchas:
+## Reach for stronger tactics during first-draft writing
 
-- **A `module` file can only `import` other `module` files.** If
-  you add a new project-internal import, the imported file must
-  already be `module`-converted. (Build error: *"cannot import
-  non-`module` X from `module`"*.)
-- **Recent mathlib is ~98 % `module`-converted**, so almost
-  every `Mathlib.X` import already satisfies the constraint. The
-  remaining files are deep upstream pieces most projects don't
-  depend on.
-- **Non-`module` files can freely import `module` files**, so
-  external consumers (blueprint snapshot tests, scratch files) work
-  unchanged.
-- **No `import` line for `module` itself** — the bare keyword on its
-  own line is the marker, not an import.
-- **`public section` is opaque intra-module too — not just
-  cross-module.** A `def` in `public section` (no `@[expose]`) has
-  its body hidden for elaboration-time defeq even within the same
-  file (close to `@[irreducible]` semantics). Symptoms a new
-  intra-file consumer trips: *"Not a definitional equality: the
-  left-hand side"* on a `@[simp] … := rfl` projection lemma; *"Type
-  mismatch … definitions were not unfolded because their definition
-  is not exposed: foo ↦ N"* on a `match`-arm whose result type needs
-  `foo`'s body. **Fix:** promote the specific `def` to `@[expose]
-  def …`; the surrounding section can stay `public section`. The
-  default for a new file is `public section`; reach for
-  `@[expose] public section` only when *most* of the file's defs
-  need body exposure.
-- **`set_option backward.privateInPublic …` is technical debt and
-  must be eliminated, not propagated.** The option is a `backward.*`
-  compat knob that re-enables legacy "private-callable-from-public"
-  semantics — it exists to ease the module-system migration and the
-  reference manual explicitly says *"These warnings can be used to
-  locate and eventually eliminate these references, allowing
-  `backward.privateInPublic` to be disabled."* Do not introduce new
-  opt-ins.
+`../TACTICS-GOLF.md` is read at cleanup / golfing time per its own
+header — *not* during first-draft writing. That timing is right
+for golfing rules but leaves a gap for tactics whose payoff is
+*don't write the manual chain in the first place*. The first-draft
+reminder for three under-used closers:
 
-  Mechanics: the opt-in is required only when a private declaration
-  participates in an *exposed* body — a `def` / `instance` body or
-  signature in `@[expose] public section`. Proof bodies of `theorem`
-  / `lemma` are in the *private scope* regardless of section
-  attributes (per the reference manual *Modules and Visibility* /
-  *Exposed and Unexposed Definitions*), so a `private lemma`
-  referenced only from public `theorem` proof bodies needs no opt-in
-  at all. When the build fails with *"Unknown identifier X. Note: A
-  private declaration X (from the current module) exists but would
-  need to be public to access here"*, the short-term fix is the
-  per-declaration form applied to **both** the private declaration
-  and its public consumer:
-  ```
-  set_option backward.privateInPublic true in
-  set_option backward.privateInPublic.warn false in
-  private def myHelper ...
+- **`grind` before stacked `omega` / `linarith` / `simp; ring`
+  closers.** Default to `grind` (then `grind?` once on success,
+  pin as `grind only [...]`) for any goal whose final step is
+  "use a handful of facts in scope to close arithmetic with
+  equalities". `../TACTICS-GOLF.md` § 1.
+- **`gcongr` before manual `mul_le_mul_of_nonneg_*` / `add_le_add`
+  / `mul_lt_mul_of_pos_*`.** Default to `by gcongr` (or `by gcongr;
+  exact <positivity-hint>`) for any goal whose final step is a
+  monotonicity-chain rewrite with a shared outer function (`*`,
+  `+`, `^`, …) and an inner ≤/< hypothesis in scope.
+  `../TACTICS-GOLF.md` § 7.
+- **`fun_prop` before manual `ContDiff.comp` / `ContDiffAt.comp` /
+  `Differentiable.comp` chains — *but not* before value-form
+  `HasDerivAt.comp_of_eq` / `HasFDerivAt.comp` /
+  `.congr_of_eventuallyEq`.** `fun_prop` handles property-form
+  goals (`ContDiff 𝕜 n f`, `Continuous f`, `Differentiable 𝕜 f`);
+  value-form derivative goals stay on the named API (the
+  discharger cannot synthesize a chain-rule derivative term that
+  unifies with a goal-specific derivative).
+  `../TACTICS-GOLF.md` § 3.
 
-  set_option backward.privateInPublic true in
-  set_option backward.privateInPublic.warn false in
-  noncomputable def MyConsumer ...
-  ```
-  The set_option lines go *before* the doc-comment, not after — the
-  doc-comment must immediately precede the declaration it documents.
-  **A `private theorem` tagged `@[fun_prop]` / `@[simp]` / `@[ext]`
-  / etc.** that downstream tactics resolve by name also needs the
-  opt-in, because the tactic database stores the private name and
-  cross-module references then fail. For attribute-tagged
-  helpers, demoting from `private` to plain public is often the
-  cleaner fix and is preferred to a new opt-in.
+All three dischargers share a `∀`-quantified-hypothesis limitation
+— pre-extract a per-index `have hX_e : … := hX e` when the
+precondition needs it. **Cheap A/B test:** `lean_multi_attempt`
+fires several candidates against a proof position in one MCP
+round-trip — see *Lean LSP MCP* below.
 
 ## Lean LSP MCP — reach for it
 
@@ -223,32 +144,49 @@ Constraints and gotchas:
 the server on first prompt. File paths resolve against the project
 root. **An MCP call is sub-second; an `edit + lake build` cycle is
 30+ seconds — the cost asymmetry is the whole point.** Whenever you
-would otherwise:
-
-- guess at a closing tactic — use `lean_multi_attempt` at the proof
-  position to A/B-test several candidates
-  (e.g. `["grind", "omega", "simp", "ring"]`) in one round-trip,
-  instead of editing-and-rebuilding for each guess. Same for
-  finding the right `simp [...]` argument set.
-- hunt for a mathlib lemma via `grep -rn` in
-  `.lake/packages/mathlib` — use `lean_loogle` (type pattern) or
-  `lean_leanfinder` (concept) instead; both are faster and return
-  structured results.
-- open an upstream `.lean` file to read a signature — use
-  `lean_hover_info` at the identifier's start column.
-- insert a `sorry` and rebuild to see what the intermediate goal
-  looks like — use `lean_goal` at the line (omit `column` for
-  before/after; pass `column` for an exact position).
-- check the project's existing API for a name match — use
-  `lean_local_search` instead of `grep -rn` on the project's
-  `.lean` files.
+would otherwise edit-and-rebuild to inspect an intermediate goal
+(`lean_goal`), hunt for a mathlib lemma (`lean_loogle` /
+`lean_leanfinder`), read an upstream signature (`lean_hover_info`),
+check the project's own API for a name (`lean_local_search`), or
+guess at a closing tactic (`lean_multi_attempt` A/B-tests several
+candidates in one round-trip) — reach for the MCP first. Full
+decision tree, cold-start details, and `lean_multi_attempt` payload
+shape: `../TACTICS-GOLF.md` § 4.
 
 Run `lake build` once before the first MCP call (warms `lake
-serve`); skip if you've built recently this session. **Do not call
-`lean_leansearch`** — its endpoint has been down since late 2025;
-use `lean_loogle` / `lean_leanfinder` instead. Full decision tree,
-cold-start details, and `lean_multi_attempt` payload shape in
-`../TACTICS-GOLF.md` § 4.
+serve`); skip if you've built recently this session. Two caveats:
+
+- **Do not call `lean_leansearch`** — its endpoint has been down
+  since late 2025; use `lean_loogle` / `lean_leanfinder` instead.
+- **`lean_verify`'s axiom report can be stale** — it can report a
+  phantom `sorryAx` on a genuinely sorry-free decl (stale LSP
+  cache). A **warning-clean `lake build` is authoritative** for "no
+  `sorry`" (Lean always emits a `declaration uses 'sorry'` warning
+  for a real one), as is `#print axioms` against the freshly-built
+  olean. Check `lean_diagnostic_messages` / re-run before believing
+  a phantom report.
+
+## Editing a patchable fork of a Lake dependency (optional pattern)
+
+Some projects pin a non-mathlib Lake dependency to the user's own
+fork (e.g. a fork of `apnelson1/Matroid`) precisely so the project
+can patch it. When that applies:
+
+- **Prefer the project-side route first.** A new lemma in project
+  source or a `Mathlib/<exact path>` mirror travels with the
+  project and needs no cross-repo step. Reach into the fork only
+  when the project-side route genuinely can't reach the internals
+  you need.
+- **The checkout under `.lake/packages/<pkg>/` is a separate git
+  repo.** Edit + commit in *that* repo's own history. Do **not**
+  push the fork or bump its `rev`/`inputRev` pins in
+  `lake-manifest.json` / `lakefile.toml` unprompted — both are
+  outward-facing, cross-repo steps; surface them to the user as a
+  follow-up.
+- **Flag any pending fork edit** in the commit summary and the
+  active `notes/PhaseN.md`: a local-only fork edit does not travel
+  with a `git push` of this repo until the pin is bumped, so an
+  unflagged one silently breaks the build for the next checkout.
 
 ## Before each commit — friction review (mandatory)
 
@@ -320,13 +258,44 @@ surely as a failing build. The full-project linter (`runLinter`)
 catches `simpNF` and `unusedArguments` issues that the compile-time
 `mathlibStandardSet` linter misses, so don't skip it.
 
-Newly-added `@[simp]` attributes are the usual offenders — if the
-LHS is reducible by existing simp lemmas, drop the `@[simp]` (the
-lemma stays callable by name) rather than working around with
-`@[nolint simpNF]`. Reserve `@[nolint unusedArguments]` for instance
-args that are semantically required by the definition's contract
-but not consumed by elaboration; always add a one-line comment
-justifying it.
+**A green build is not enough — the build must be _warning-clean_.**
+`lake build` exits 0 even when it emits compile-time `linter.*`
+warnings (`unusedSimpArgs`, `flexible`, `unusedDecidableInType`,
+`unusedFintypeInType`, …), and these are **not** caught by `lake lint`
+/ `runLinter` — the two linter families are disjoint. So "build green
++ `lake lint` clean" can still leave warnings riding in a commit (an
+ancestor project shipped warnings into a vendored-port commit through
+exactly this gap). **Before each commit, scan the full `lake build`
+output for `warning:`** (e.g. `lake build <module> 2>&1 | grep -nE
+'warning:'`) and drive the count to zero. Touch the file first
+(`touch X.lean`) if the build is cached, since cached modules don't
+re-emit warnings.
+
+**Fix warnings at the source; never paper over them.** The
+fix-precedence order is:
+1. **Solve it at the source** — drop the genuinely-unused simp arg;
+   convert a `flexible` `simp […]` to `simp only […]` (or `suffices`);
+   drop an unused `[Decidable…]`/`[Fintype…]` hypothesis and open the
+   body with `classical` / `haveI := Fintype.ofFinite _` where a proof
+   step actually needs it. This is almost always the right answer,
+   including in vendored ports — a style sweep there is low-risk and
+   keeps the project warning-clean.
+2. **`@[nolint …]` / `set_option linter.X false` only with a
+   justification _and_ only when the warning is a genuine false
+   positive** — i.e. the flagged construct is semantically required
+   but the linter can't see why (the canonical case is an instance arg
+   required by a definition's contract). Always add a one-line comment
+   stating why the suppression is correct, not merely convenient. A
+   suppression used to dodge a real fix is a defect, not a workaround.
+3. **If you can neither fix it at the source nor justify a suppression**
+   — e.g. the fix would meaningfully alter a vendored proof's content,
+   or you don't understand why the warning fires — **surface it to the
+   user** rather than committing the warning or silencing it blind.
+
+Newly-added `@[simp]` attributes are the usual `lake lint` offenders —
+if the LHS is reducible by existing simp lemmas, drop the `@[simp]`
+(the lemma stays callable by name) rather than working around with
+`@[nolint simpNF]`.
 
 > **Blueprint pointer touched?** If the commit also edits any
 > `\lean{...}` pointer in `../blueprint/`, run `checkdecls` per

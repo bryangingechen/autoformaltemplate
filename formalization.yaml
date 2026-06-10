@@ -1,0 +1,117 @@
+# formalization.yaml (v0.3): repo-root metadata for formalization projects.
+# Schema: https://github.com/mathlib-initiative/formalization.yaml
+# Requiredness/conformance:
+#   - Fields marked [required] should be present and filled.
+#   - Fields not marked [required] are examples/recommended metadata only; they may be omitted.
+#   - Projects may add extra YAML keys at any level. Readers should tolerate unknown keys.
+# This is a lightweight reporting schema, not a closed validation schema.
+#
+# Upkeep discipline (see CLAUDE.md): fill this in incrementally from day
+# one rather than backfilling at the end — it is one of the project's
+# user-facing status surfaces, synced at every phase open/close. In
+# particular: add a `sources` entry when a new paper/textbook enters the
+# project; update `status` (scope prose, sorry counts, main_results) and
+# `alignment` when a phase closes; keep `automation` current as the
+# tooling/model setup changes.
+
+version: "v0.3"
+
+# project - the formalization itself (not the source).
+project:
+  name: "{{PROJECT_NAME}}"                                       # [required]
+  authors: ["{{AUTHOR}}"]                                        # [required] who did the formalization
+  license: "Apache-2.0"                                          # [required] keep in sync with LICENSE
+  repository: "https://github.com/{{GITHUB_USER}}/{{project-name}}"
+  website: "https://{{GITHUB_USER}}.github.io/{{project-name}}/"
+  blueprint: "https://{{GITHUB_USER}}.github.io/{{project-name}}/blueprint/"
+
+# sources - what was formalized. List of papers/textbooks/blueprints/etc.
+# One entry per source; add entries as sources enter the project.
+sources:                                                          # [required] list of sources
+  - title: "TODO: title of the primary source"
+    authors: ["TODO"]
+    id: "doi:TODO"                                               # DOI / ISBN / arXiv id
+    type: "journal article"                                      # journal article | textbook | survey | preprint | ...
+    author_contacted: "no"                                       # yes | no | n/a (e.g. classical / deceased)
+    # prior_work: "optional pointer to the result this generalizes"
+    # note: "optional role note (e.g. 'presentation we follow')"
+
+# project status - update at every phase close.
+status:
+  scope: >-
+    TODO: a paragraph describing what the project formalizes, its arcs/
+    phases, and what is complete vs in progress. Re-summarize as phases
+    close; this is reader-facing prose, not a status log.
+  sorry_count: 0
+  sorry_in_definitions: 0
+  axioms: ["propext", "Classical.choice", "Quot.sound"]          # keep honest: only what `#print axioms` reports
+  policy: >-
+    TODO: the project's sorry/axiom policy (e.g. "no `sorry` and no
+    project-specific `axiom`; incomplete obligations are pinned as
+    explicit hypotheses on red blueprint dep-graph nodes; `warn.sorry =
+    true` in the lakefile is a backstop").
+  main_results: []                                               # add an entry per completed headline theorem:
+  # - declaration: "Namespace.theorem_name"
+  #   file: "{{PROJECT_NAME}}/File.lean"
+  #   description: "Statement in one sentence, with attribution."
+  #   sorry_count: 0
+  #   axioms: ["propext", "Classical.choice", "Quot.sound"]
+  #   comparator_config: ""
+  #   literature_dependencies: []
+
+# how it was produced. Extra per-entry fields are allowed.
+automation:                                                      # [required]
+  methods:                                                       # one entry per distinct phase/run/tool
+    - method: "agent"                                            # [required] manual | copilot | agent | autonomous | other
+      models: ["TODO: model ids used"]
+      framework: "Claude Code"
+      tool_setup: >-
+        TODO: harness description (CLI/model settings, lean-lsp MCP,
+        orchestration skills, the CLAUDE.md operating-manual suite).
+      cost:
+        wall_time: "TODO"
+        spend_usd: "TODO"
+        hardware: "TODO"
+      prompting_notes: >-
+        TODO: how the work was structured (phases, per-commit hand-off
+        contract, blueprint-forward mode, cleanup rounds, ...).
+  spend_usd: "TODO"
+  notes: >-
+    TODO: division of labor between human and agent; what CI gates
+    every push.
+
+# fidelity - how the formal statements relate to the sources' statements.
+fidelity:
+  divergences: >-
+    TODO: every place the formalization states something weaker,
+    stronger, or differently-shaped than the source (existence-form vs
+    almost-all, restricted regimes, added generality, vendored
+    subsystems). Update when a phase closes or a divergence is
+    introduced; an empty divergences field on a nontrivial project is
+    a smell, not a virtue.
+
+# review status
+review:
+  status: "self-assessed"                                        # [required] self-assessed | peer-reviewed | ...
+  reviewers: ["{{AUTHOR}}"]
+  notes: >-
+    TODO: what confidence rests on (CI gates, #print axioms checks,
+    cleanup-round audits, external review if any).
+
+# alignment - how source statements map to formal declarations.
+# Add a row per headline statement as its phase closes; use
+# status: proved | in-progress | stated.
+alignment:
+  namespace: "{{PROJECT_NAME}}"
+  statements: []
+  # - source: "Author YEAR, Theorem N"
+  #   lean: "Namespace.theorem_name"
+  #   module: "{{PROJECT_NAME}}/File.lean"
+  #   status: "proved"
+
+# acknowledgements - optional credits for libraries, tools, discussions, etc.
+acknowledgements: >-
+  Built on Lean 4 and mathlib4 (leanprover-community). Blueprint built
+  with leanblueprint / plastex; declaration cross-checking via
+  PatrickMassot/checkdecls. The formalization was carried out with
+  Claude Code (Anthropic).

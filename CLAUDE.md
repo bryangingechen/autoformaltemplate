@@ -10,21 +10,31 @@ files auto-load on demand when their subtree is touched and carry
 the area-specific discipline:
 
 - `{{PROJECT_NAME}}/CLAUDE.md` — Lean source ops (build/lint
-  gates, friction review, MCP guidance, the symptom-indexed quirks
-  index for build-failure rescue).
+  gates, friction review, MCP guidance, file-size triggers).
 - `notes/CLAUDE.md` — phase-notes and friction-log discipline.
-- `blueprint/CLAUDE.md` — blueprint TeX (authoring conventions,
-  `checkdecls`, local builds, dep-graph spot-check, forward-mode
-  rendering mechanics).
+- `blueprint/CLAUDE.md` — blueprint TeX ops (static checks incl.
+  `checkdecls` and the honesty/supersession gates, local builds,
+  dep-graph spot-check, forward-mode rendering mechanics).
 
 Project conventions (what the code looks like) live in `ROADMAP.md`
 and `DESIGN.md`; tactical advice for Lean proofs lives in
 `TACTICS-GOLF.md` (idioms / golfing) and `TACTICS-QUIRKS.md`
-(symptom-indexed rescue). The discipline for **cleanup rounds**
-(between-phases or post-phase audit passes — blueprint/Lean
-divergence, code-smell sweeps, long-proof audits) lives in
-`CLEANUP.md`; read it when running such a round or before opening a
-`notes/PhaseN-cleanup.md` work log.
+(symptom-indexed rescue — its *Symptom index* up top is the first
+stop when a `lake build` fails with an unfamiliar error). The
+discipline for **cleanup rounds** (between-phases or post-phase
+audit passes — blueprint/Lean divergence, code-smell sweeps,
+long-proof audits) lives in `CLEANUP.md`; read it when running such
+a round or before opening a `notes/PhaseN-cleanup.md` work log.
+
+Two further references are **read on demand, not session-start
+orientation**: `MODULE-SYSTEM.md` (converting files to the Lean
+module system; debugging `module`-related build failures) and
+`blueprint/AUTHORING.md` (blueprint TeX authoring conventions —
+annotation order, label prefixes, citations, include-vs-skip,
+proof verbosity). The auto-loaded CLAUDE.md suite is a per-session
+token budget; when it grows, extract to read-on-demand references
+like these rather than deleting content (see the phase-close
+organization review).
 
 ## Reading order
 
@@ -39,8 +49,9 @@ Every session, in order:
    triggers `notes/CLAUDE.md` auto-load.
 4. **`{{PROJECT_NAME}}/CLAUDE.md`** — auto-loads when an agent
    reads any `.lean` file under the subtree. Carries Lean-specific
-   discipline; its inline *Quirks index* is the first place to look
-   when a `lake build` fails with an unfamiliar error.
+   discipline. (`TACTICS-QUIRKS.md`'s *Symptom index* is the first
+   place to look when a `lake build` fails with an unfamiliar
+   error.)
 5. **DESIGN.md** — only when you're about to question a
    cross-cutting decision. The default answer is *don't*.
 6. **`notes/FRICTION.md`** — optional skim for an open
@@ -113,6 +124,19 @@ session is where you fix it.
   genuine exception: that fires on the commit that closes a phase,
   whenever in the session it lands, and is documented separately
   under *When this commit closes a phase*.
+- **Substantive progress per commit; recover wrapper-churn via a
+  planning commit.** Diagnostic: if a chain ships >3 consecutive
+  commits with ≤10-LoC proofs that mostly alias existing mathlib
+  facts, pause and audit whether the trajectory is approaching the
+  headline or just accreting token API surface. The recourse is a
+  **planning commit** — convert the remaining work into sorry-bodied
+  sub-lemma skeletons (full statements + prose proofs + any
+  design-decision asides) in one commit, so subsequent commits close
+  one substantive skeleton each rather than another wrapper. When
+  laying out sub-lemmas, fold mechanical assembly (an `iff`
+  combining two halves, finite-union closure) into substantive
+  predecessors rather than splitting them as separate "assembly
+  commits".
 - **State the handoff state in one sentence after each commit.**
   Once a commit lands, write one sentence to the user: either
   *"clean handoff point; next agent picks up at X"* or
@@ -162,6 +186,13 @@ content change (docs commits):
   the Phase N entry with a one-line pointer. Cross-cutting lessons
   that stay in phase notes rot — this is the rule that prevents
   Phase notes from accumulating into 500-line documents.
+- **Compress in-commit, not in a cleanup round.** If this commit
+  tips the phase note's finished part (*Decisions made*) past its
+  forward part, or trips the ~500-line tripwire (see
+  `notes/CLAUDE.md` *Forward-weighted note*), rebalance **now**.
+  Deferring to a cleanup round means the verbose intermediate gets
+  written, re-read next session, and re-compressed — three context
+  costs for one durable paragraph.
 - **If you answered a "Choices to revisit" entry** in `DESIGN.md`,
   update it.
 
@@ -181,7 +212,18 @@ checklists:
 
 - Add or update the phase's row in the ROADMAP Status table (status:
   *planning* or *in progress*) and write the §N planning section.
+  **The table cell is a thin pointer**: a status marker plus at most
+  one short scope clause and a `(see notes/PhaseN.md)` pointer —
+  never a restatement of the §N summary.
 - Create `notes/PhaseN.md` from the template in `notes/CLAUDE.md`.
+- **Run the red-node consistency gate** when the phase opens to
+  build already-stubbed blueprint nodes: read the target nodes
+  end-to-end *including proofs* and confirm each is self-consistent —
+  the proof routes through the argument the statement claims, and no
+  live `\uses` or proof step points at a superseded node. Red nodes
+  fall through the `\leanok`-gated honesty gate (see
+  `blueprint/CLAUDE.md`), so phase-open is the only forced re-read
+  of a deferred node's proof.
 - **Sync the user-facing status surfaces** so the project's
   externally-visible state reflects that Phase N is now in progress:
   - `README.md` — *Project status* prose.
@@ -190,12 +232,28 @@ checklists:
   - `blueprint/src/chapter/intro.tex` — §*Phase plan* prose and the
     enumerate (add the new bullet); update the dep-graph-status line
     at the end of the section if relevant.
+  - `formalization.yaml` — `status.scope` if the new phase changes
+    the in-progress description; add any new `sources` entries the
+    phase introduces.
 
-  These three are the project's public face (rendered to GitHub
-  Pages on every master push); let them drift and the website +
-  README silently misrepresent project state. Confirm Phase N-1's
+  These are the project's public face (the first three render to
+  GitHub Pages on every master push); let them drift and the website
+  + README silently misrepresent project state. Confirm Phase N-1's
   status on each surface at the same time — if the previous phase
   closed without flipping these, do it here.
+
+  **They are reader-facing summaries, not a status log.** Two rules:
+  *register* — these surfaces address a domain reader or site
+  visitor, not an agent mid-phase; agent-process jargon
+  (`green-modulo-N`, `design-pass-first`, sub-phase blow-by-blow,
+  raw blueprint labels in prose) is banned. *Sync = re-summarize,
+  not append* — the orientation prose is fixed-size; a paragraph
+  added per phase means you are logging status, not summarizing.
+- **If the project keeps a cross-phase program doc** (a
+  `notes/<program>.md` map spanning several phases), sync it here
+  too — docs with no CI gate drift silently, and phase boundaries
+  are the only forced touch-point. Per-phase entries stay
+  one-paragraph-max, pointing at §N / `notes/PhaseN.md`.
 
 ### When this commit closes a phase
 
@@ -204,26 +262,46 @@ The commit that takes the last red node green for a phase (or that
 otherwise discharges the phase's target) carries extra work *on top
 of* the per-commit checklists above:
 
-- Flip the phase's row in the ROADMAP Status table to ✓.
+- Flip the phase's row in the ROADMAP Status table to ✓, and
+  **re-thin the cell** while you're there — §N prose is the *single*
+  per-phase summary home; a cell that has absorbed a summary gets
+  cut back to marker + scope clause + pointer.
 - **Compress its planning section in ROADMAP** to a one-paragraph
   summary plus a pointer to `notes/PhaseN.md`. The lemma list and
   decisions live in `notes/PhaseN.md`; ROADMAP carries the hand-off
   summary.
-- **Sync the user-facing status surfaces.** Same three surfaces as
-  the phase-open subsection above: `README.md` *Project status*,
-  `home_page/index.md` *Project status* + phase table, and
-  `blueprint/src/chapter/intro.tex` §*Phase plan* + enumerate
-  (including the dep-graph-status line at the end of the section).
-  Flip Phase N's marker to ✓ on each.
+- **Sync the user-facing status surfaces.** Same surfaces (and same
+  register / re-summarize rules) as the phase-open subsection above:
+  `README.md` *Project status*, `home_page/index.md` *Project
+  status* + phase table, `blueprint/src/chapter/intro.tex` §*Phase
+  plan* + enumerate (including the dep-graph-status line), and
+  `formalization.yaml`. Flip Phase N's marker to ✓ on each. In
+  `formalization.yaml`, update `status.scope`, add the phase's
+  headline theorem to `status.main_results` and `alignment`
+  (verified with `#print axioms`), and record any new `fidelity`
+  divergences — backfilling that file at project end loses exactly
+  the per-phase detail it exists to capture. Closing a phase folds
+  now-closed phases back into chapter/arc-level summaries on every
+  surface; don't just append a new paragraph.
+- **Re-read each new or edited blueprint chapter end-to-end as a
+  domain mathematician.** Per-commit node edits accrete
+  formalization asides ("formalized basis-free via ...") that read
+  as changelog, not math — collapse them. This pass is also where
+  any crux-node expositions get written (see `blueprint/CLAUDE.md`).
 - **Review project organization.** Re-skim ROADMAP.md,
   `TACTICS-GOLF.md`, `TACTICS-QUIRKS.md`, and `notes/FRICTION.md`
   (status sections). Have decisions in `notes/PhaseN.md` accumulated
   past the lift-on-promotion threshold? Has FRICTION.md grown
   unscannable? Is any DESIGN.md / ROADMAP.md prose-count or
-  section-name reference stale? Apply the small fix in this commit
-  if obvious; otherwise file a project-organization friction entry
-  to address next phase. This step is what keeps the docs from
-  drifting between phase boundaries.
+  section-name reference stale? **Audit the auto-loaded CLAUDE.md
+  suite for bloat** (this file + the three subdirectory ones): every
+  session pays their token cost at start; when a section has grown
+  past orientation size, extract it to a read-on-demand reference
+  (the `MODULE-SYSTEM.md` / `blueprint/AUTHORING.md` pattern), don't
+  delete it. Apply the small fix in this commit if obvious;
+  otherwise file a project-organization friction entry to address
+  next phase. This step is what keeps the docs from drifting between
+  phase boundaries.
 
 ## Referencing prior work
 
@@ -313,3 +391,10 @@ restructuring that's relevant to interpreting git log. Delete the
 placeholder if the project starts fresh. -->
 
 TODO: project-history paragraph.
+
+<!-- If the project ever vendors code from another repository (e.g. a
+subsystem ported from an Apache-2.0 Lean package), add a "Vendored
+provenance" paragraph here: name the upstream package and license,
+give every vendored file a copyright header with a provenance +
+modifications note, and record the attribution discipline in
+DESIGN.md. Delete this comment otherwise. -->
