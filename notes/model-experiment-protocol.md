@@ -4,9 +4,11 @@
 formalization repo running the same experiment. Repo-local state
 (which phase is under test, the log, local pointers) lives in a
 sibling `notes/model-experiment.md`; this file carries only the
-protocol. Protocol changes should be made identically in every
-participating repo (treat the copy in each repo as a pinned version;
-note the date of the last sync in the sibling log file).
+protocol. Protocol improvements are encouraged — when one lands, fix
+it immediately in the repo where the lesson surfaced, then propagate
+the same edit to the other participating repos (note the date of the
+last sync in the sibling log file). The sync step is cheap; never let
+it deter or delay getting the process right.
 
 **Question.** Coordinator sessions (e.g. a `/coordinate-phase` loop)
 dispatch one subagent per commit. When do cheaper / faster models
@@ -78,7 +80,13 @@ full diff (not just `--stat`) before the next dispatch.
 
 ## Per-dispatch record (log schema)
 
-One row per dispatch in the sibling log file:
+One row per dispatch in the sibling log file. **Write and commit the
+row only after the coordinator's verification pass has completed in
+full** — gates, the full-diff read (mandatory below top rung), and
+the re-read of the updated hand-off — never between gates: a
+prematurely-scored row silently inflates the rubric and forces a
+history-visible correction once pushed. Correct a committed row by a
+follow-up edit, not a history-rewriting amend.
 
 | Field | Meaning |
 |---|---|
