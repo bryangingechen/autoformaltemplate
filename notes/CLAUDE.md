@@ -57,6 +57,13 @@ for *organizing* this directory is here.
 - **`PERFORMANCE.md`** — performance investigations and structural
   options (Lean module system, import boundaries). Its own header
   explains the format. Created lazily.
+- **`model-experiment-protocol.md` / `model-experiment.md`** — the
+  model-tier dispatch experiment (which subagent model rung per
+  task). The protocol file is portable — keep it byte-identical
+  across participating repos; the log file is repo-local (config +
+  dispatch log + findings), and its Status line arms the
+  experiment step in `.claude/commands/coordinate-phase.md`.
+  Delete both if the project won't run the experiment.
 
 ## One canonical home per content type
 

@@ -44,9 +44,12 @@ argument; you only pass one project-name string.
   blueprint build rig, home_page Jekyll skeleton, Apache-2.0 `LICENSE`.
 - **Process docs**: `CLAUDE.md` (root + per-subdirectory), `ROADMAP.md`,
   `DESIGN.md`, `CLEANUP.md`, `TACTICS-GOLF.md`, `TACTICS-QUIRKS.md`,
-  `MODULE-SYSTEM.md` (read-on-demand), `blueprint/AUTHORING.md`
+  `MODULE-SYSTEM.md` / `blueprint/AUTHORING.md` / `REFS.md`
   (read-on-demand), `notes/Phase0.md` scaffold (Phase 0 = write the
-  informal blueprint end-to-end before any Lean).
+  informal blueprint end-to-end before any Lean), and the
+  model-tier dispatch experiment
+  (`notes/model-experiment-protocol.md` + `notes/model-experiment.md`,
+  armed by the log's Status line — see below).
 - **Project metadata**: `formalization.yaml` skeleton (the
   [mathlib-initiative self-reporting
   schema](https://github.com/mathlib-initiative/formalization.yaml));
@@ -118,6 +121,12 @@ these may be over-engineering for a smaller experiment:
 - **`.claude/commands/coordinate-phase.md`** — slash command for
   agent-driven phase coordination. Delete if you're not using Claude
   Code's slash command system.
+- **`notes/model-experiment-protocol.md` + `notes/model-experiment.md`**
+  — the model-tier dispatch experiment (rate each coordinator
+  dispatch on S/P/B axes, pick a model rung, log outcomes; pooled
+  across participating repos). Ships disarmed (the log's Status is
+  `not started`); flip the Status to `running` to join, or delete
+  both files if the project won't participate.
 
 ## What the template does *not* include
 

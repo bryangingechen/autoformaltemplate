@@ -163,6 +163,18 @@ the order. Sharpenings, each a distinct failure mode:
   construction to where the output point is actually chosen and
   confirm it has `P` — the survival question often reveals a
   shorter path.
+- **A standing hypothesis needs a satisfiability witness, not just
+  green consumers.** A hypothesis every consumer takes as given is
+  never checked satisfiable by a green build: a mis-transcribed
+  definition (e.g. a source's strict `1 < …` transcribed as mere
+  nonemptiness) can make a branch hypothesis vacuous while phases of
+  conditional theorems stay green on top of it. When a branch
+  hypothesis *quantifies over* a transcribed definition ("no X
+  exists", "every X satisfies …"), (a) re-verify the transcription
+  against the primary source's exact inequality, and (b) exhibit a
+  satisfying instance the first time a phase consumes the
+  hypothesis — a one-line witness (`lean_run_code`) is cheap; churn
+  on a vacuous branch is not.
 
 ### Match the source's argument structure, not just its conclusion
 

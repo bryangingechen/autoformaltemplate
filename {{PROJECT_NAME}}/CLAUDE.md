@@ -169,24 +169,16 @@ serve`); skip if you've built recently this session. Two caveats:
 ## Editing a patchable fork of a Lake dependency (optional pattern)
 
 Some projects pin a non-mathlib Lake dependency to the user's own
-fork (e.g. a fork of `apnelson1/Matroid`) precisely so the project
-can patch it. When that applies:
-
-- **Prefer the project-side route first.** A new lemma in project
-  source or a `Mathlib/<exact path>` mirror travels with the
-  project and needs no cross-repo step. Reach into the fork only
-  when the project-side route genuinely can't reach the internals
-  you need.
-- **The checkout under `.lake/packages/<pkg>/` is a separate git
-  repo.** Edit + commit in *that* repo's own history. Do **not**
-  push the fork or bump its `rev`/`inputRev` pins in
-  `lake-manifest.json` / `lakefile.toml` unprompted — both are
-  outward-facing, cross-repo steps; surface them to the user as a
-  follow-up.
-- **Flag any pending fork edit** in the commit summary and the
-  active `notes/PhaseN.md`: a local-only fork edit does not travel
-  with a `git push` of this repo until the pin is bumped, so an
-  unflagged one silently breaks the build for the next checkout.
+fork precisely so the project can patch it. When that applies:
+prefer the project-side route first (project source or a
+`Mathlib/<exact path>` mirror — it travels with the project). The
+checkout under `.lake/packages/<pkg>/` is a **separate git repo**:
+edit + commit in *its* history, and never push the fork or bump its
+`rev`/`inputRev` pins unprompted — both are outward-facing; surface
+them as a follow-up. Flag any pending fork edit in the commit
+summary and the active `notes/PhaseN.md`: a local-only fork edit
+doesn't travel with a `git push` of this repo until the pin bumps,
+so an unflagged one silently breaks the build for the next checkout.
 
 ## Before each commit — friction review (mandatory)
 

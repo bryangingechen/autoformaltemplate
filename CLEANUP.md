@@ -366,8 +366,8 @@ Two ad-hoc flavors are recognized beyond the standard A–E pass:
   Lean detail leaking into reader-facing prose), the public
   surfaces (README, home page, doc-gen front page, theorem
   discoverability), and the internal docs. No Lean proof changes;
-  the operative gate is `blueprint/verify.sh` green plus the static
-  checks from `blueprint/CLAUDE.md`.
+  the operative gate is `blueprint/verify.sh` green plus
+  `blueprint/lint.sh` (the static checks from `blueprint/CLAUDE.md`).
 
 The log follows the standard `notes/PhaseN.md` template — see
 `notes/CLAUDE.md` *Template for `notes/PhaseN.md`*. Sub-organisation

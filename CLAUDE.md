@@ -26,12 +26,13 @@ audit passes — blueprint/Lean divergence, code-smell sweeps,
 long-proof audits) lives in `CLEANUP.md`; read it when running such
 a round or before opening a `notes/PhaseN-cleanup.md` work log.
 
-Two further references are **read on demand, not session-start
+Three further references are **read on demand, not session-start
 orientation**: `MODULE-SYSTEM.md` (converting files to the Lean
-module system; debugging `module`-related build failures) and
+module system; debugging `module`-related build failures),
 `blueprint/AUTHORING.md` (blueprint TeX authoring conventions —
 annotation order, label prefixes, citations, include-vs-skip,
-proof verbosity). The auto-loaded CLAUDE.md suite is a per-session
+proof verbosity), and `REFS.md` (reading the reference PDFs in
+`.refs/`). The auto-loaded CLAUDE.md suite is a per-session
 token budget; when it grows, extract to read-on-demand references
 like these rather than deleting content (see the phase-close
 organization review).
@@ -143,9 +144,14 @@ session is where you fix it.
   *"intentionally mid-step; if you stop me now, Y is the loose end."*
   Cheap, lets the user judge whether to stop or continue without
   the agent unilaterally drawing a session boundary.
-- Match git author identity to existing commits when committing on
-  the user's behalf. Pass `git -c user.name=… -c user.email=… commit …`;
-  never write to git config.
+- **Commit attribution.** Match the author identity of existing
+  commits exactly: `git -c user.name=… -c user.email=… commit …`;
+  never write to git config, and do **not** substitute an email from
+  session context (the harness-injected user email may differ from
+  the project identity). In the `Co-Authored-By:` trailer, name the
+  model *actually generating the commit* — check your own model
+  identity rather than copying the trailer from recent `git log`
+  (history may have been authored by a different model).
 - **Pushing to `master` triggers a Pages deploy** (blueprint, docs,
   upstreaming dashboard via `leanprover-community/docgen-action`).
   PRs run the same build but skip the deploy step. There is no
@@ -353,35 +359,10 @@ The minimum bar:
 
 ### Reading PDFs in `.refs/`
 
-When the project accumulates reference PDFs locally (under `.refs/`,
-gitignored), the standard `Read` tool needs `pdftoppm` (poppler) to
-extract text; if that's not available, use the `pypdf` library
-inside the blueprint Python venv — it reads PDFs directly without
-external system tools:
-
-```sh
-cd blueprint && source .venv/bin/activate
-# pypdf is not in requirements.txt; install once per fresh venv.
-pip install pypdf >/dev/null
-
-python3 - <<'PY'
-import pypdf
-r = pypdf.PdfReader('/path/to/.refs/some-paper.pdf')
-print('pages:', len(r.pages))
-print(r.pages[0].extract_text()[:4000])
-# Or grep for keywords across the whole PDF:
-for i, page in enumerate(r.pages):
-    if 'keyword' in page.extract_text():
-        print(f'page {i+1} mentions keyword')
-PY
-```
-
-Page numbering caveat: printed pages may not start at 1, so *paper
-p.N* often corresponds to *pdf page (N − offset)*. Check page 1 to
-calibrate.
-
-For formal `\cite{}` work in the blueprint, see `blueprint/CLAUDE.md`
-*Citations* and *Static checks before commit*.
+Reference PDFs accumulate under `.refs/` (gitignored). The how-to
+for reading them (pypdf inside the blueprint venv when the `Read`
+tool lacks poppler; the page-offset caveat) lives in `REFS.md` —
+read on demand when consulting a PDF, not session-start orientation.
 
 ## Project-history note
 

@@ -16,7 +16,7 @@ Before dispatching the first subagent, confirm with the user whether
 this run modifies any of these instructions. In practice users almost
 always customize at session start — typically lifting the 10-run cap
 ("keep going until the phase closes or something looks off") and
-pre-authorizing the mechanical fixups in step 3 — so ask once up
+pre-authorizing the mechanical fixups in step 4 — so ask once up
 front instead of interrupting at the first occurrence.
 
 Loop:
@@ -39,7 +39,18 @@ Loop:
    churn**: 3+ consecutive commits with small proofs that mostly
    alias existing facts means the trajectory needs a planning/recon
    commit, not another wrapper.
-2. Dispatch Agent (subagent_type: general-purpose) with exactly the
+2. **Model-tier experiment (only while `notes/model-experiment.md`
+   says Status: running):** rate the dispatch on the S/P/B axes and
+   pick the model rung per `notes/model-experiment-protocol.md` (the
+   portable protocol: axes, assignment map, probes / boundary pairs,
+   quality rubric); pass the rung as the Agent tool's `model`
+   parameter, holding the prompt fixed. After the commit verifies,
+   append the dispatch row to the log in `notes/model-experiment.md`.
+   The protocol file is the single source of truth — don't duplicate
+   it here. If the log's Status says concluded, follow whatever
+   standing guideline its *Findings* section promoted, and ignore
+   this step.
+3. Dispatch Agent (subagent_type: general-purpose) with exactly the
    prompt below (for a recon / design-pass step, adapt the first line
    to name that deliverable):
 
@@ -49,13 +60,16 @@ Loop:
        branch — and match the git author identity of the existing
        commits. Follow the project's reading order, friction review,
        and pre-commit checklist (CLAUDE.md and its subdirectory
-       auto-loads carry the discipline). After committing, return
+       auto-loads carry the discipline). Run your build/lint gates
+       to completion and commit before ending your turn — never end
+       the turn with finished-but-uncommitted work while a
+       background gate is still running. After committing, return
        a final message of exactly the form:
          LANDED <sha>: <one-line summary>
        or
          BLOCKED: <one-paragraph reason and what would unblock>.
 
-3. When the subagent returns, run `git log --oneline -3`, `git show
+4. When the subagent returns, run `git log --oneline -3`, `git show
    --stat HEAD`, and `git branch --show-current`. Verify: HEAD
    advanced past the noted sha; **we are still on the default
    branch**; the commit author matches the project's existing
@@ -68,7 +82,14 @@ Loop:
    **Mechanical fixups, not stops:** if the subagent committed on a
    new branch, `git checkout <default> && git merge --ff-only <branch>
    && git branch -d <branch>`; if the author is wrong, `git commit
-   --amend --author=...`; then continue. Re-read the updated
+   --amend --author=...`; then continue. **A return with neither
+   LANDED nor BLOCKED** usually means the subagent parked on a
+   background build gate and ended its turn with
+   finished-but-uncommitted work in the tree. Don't blind-redispatch
+   a fresh "continue" agent — it re-reads everything and may park
+   the same way; instead verify the working-tree diff against the
+   hand-off yourself, run the build/lint gates, and commit with the
+   project author identity. Re-read the updated
    "Hand-off / next phase". **For a recon / design-pass commit, also
    sanity-check the *verdict's reasoning*, not just the commit
    mechanics.** A recon can be mechanically clean (committed, right
@@ -82,24 +103,35 @@ Loop:
    conjunct / lemma the producer consumes, confirm every *other*
    carried obligation still closes under the new route — a re-route
    can orphan a hypothesis the discarded route silently supplied.
+   **A recon that surfaces a NEW gap or a definition-level defect is
+   usually cheaply verifiable — verify it before re-planning on it:**
+   check the claim against the primary source (`.refs/` PDFs; see
+   `REFS.md`) and/or a one-line Lean witness (`lean_run_code`). A
+   verified gap is a safe re-plan foundation; an unverified one just
+   relocates the churn.
    And **build-dispatched subagents sometimes self-redirect to a
    recon** (they read the "build" and find it needs design first —
    often the right call); apply this same verdict-reasoning scrutiny
    to those unsolicited recons too, *especially* when one overturns
    or dissolves a prior finding.
-4. If the commit changed any `.lean` file, run `lake build` of the
+5. If the commit changed any `.lean` file, run `lake build` of the
    leftmost active phase file as a cheap post-commit gate. If red,
    stop and surface. Skip this gate for docs/blueprint-only commits
    (no `.lean` changed — nothing to rebuild).
-5. Write one sentence to the user: clean handoff to the next
+6. Write one sentence to the user: clean handoff to the next
    iteration, or the specific concern if anything looked off. If the
    remaining work suggests a **phase-boundary decision** — closing
    the phase early, or splitting a self-contained chunk into a new
    sub-phase — surface it to the user with a concrete commit-count
    estimate rather than deciding it unilaterally.
-6. Stop and surface on any of:
+7. Stop and surface on any of:
    - ROADMAP Status table shows Phase $ARGUMENTS ✓ (phase closed; the
-     subagent will have already run the phase-close checklist).
+     subagent will have already run the phase-close checklist). This
+     includes a user-approved mid-session close-and-split: after the
+     requested action lands, report it and **confirm with the user
+     before restarting the loop** on the successor phase — completing
+     a requested action is not approval to resume autonomous
+     dispatch.
    - Subagent returned BLOCKED.
    - HEAD didn't advance (subagent didn't actually commit).
    - Diff looks suspicious — unexpectedly large, or touches files
