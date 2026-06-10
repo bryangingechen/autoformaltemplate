@@ -61,9 +61,9 @@ for *organizing* this directory is here.
   model-tier dispatch experiment (which subagent model rung per
   task). The protocol file is portable — keep it byte-identical
   across participating repos; the log file is repo-local (config +
-  dispatch log + findings), and its Status line arms the
-  experiment step in `.claude/commands/coordinate-phase.md`.
-  Delete both if the project won't run the experiment.
+  dispatch log + findings); see `model-experiment.md` Status
+  line — it is the single home for arm-or-delete instructions
+  and gates `.claude/commands/coordinate-phase.md`.
 
 ## One canonical home per content type
 

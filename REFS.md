@@ -31,5 +31,5 @@ Page numbering caveat: printed pages may not start at 1, so *paper
 p.N* often corresponds to *pdf page (N − offset)*. Check page 1 to
 calibrate.
 
-For formal `\cite{}` work in the blueprint, see `blueprint/CLAUDE.md`
-*Citations* and *Static checks before commit*.
+For formal `\cite{}` work in the blueprint, see `blueprint/AUTHORING.md`
+*Citations* and `blueprint/CLAUDE.md` *Static checks before commit*.

@@ -24,7 +24,7 @@ SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 SRC="$SCRIPT_DIR/src"
 cd "$SRC"
 
-# Collect chapter TeX files (top-level and one subdirectory level).
+# Collect chapter TeX files (recursively under chapter/).
 TEXFILES="$(find chapter -name '*.tex' | sort)"
 if [ -z "$TEXFILES" ]; then
     echo "lint.sh: no chapter/*.tex files found under $SRC" >&2
@@ -58,8 +58,8 @@ fi
 # --- 2. \cite keys vs bibliography.bib ---------------------------------
 if [ -f bibliography.bib ]; then
     # shellcheck disable=SC2086
-    { grep -hoE '\\cite\{[^}]+\}' $TEXFILES || true; } \
-        | sed 's/\\cite{//;s/}$//' | tr ',' '\n' | sed 's/^ *//;s/ *$//' \
+    { grep -hoE '\\cite(\[[^]]*\])?\{[^}]+\}' $TEXFILES || true; } \
+        | sed -E 's/\\cite(\[[^]]*\])?\{//;s/}$//' | tr ',' '\n' | sed 's/^ *//;s/ *$//' \
         | sort -u > "$TMP/cite-keys.txt"
     { grep -hoE '^@[a-zA-Z]+\{[^,]+' bibliography.bib | sed 's/^@[a-zA-Z]*{//' || true; } \
         | sort -u > "$TMP/bib-keys.txt"
