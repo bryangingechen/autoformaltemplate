@@ -51,6 +51,9 @@ jobs:
       - name: Syntax-check rename.sh
         run: bash -n scripts/rename.sh
 
+      - name: Test hook scripts (template form)
+        run: ./scripts/test-hooks.sh
+
       - name: Run rename.sh
         run: ./scripts/rename.sh TestProject test-user
 
@@ -71,6 +74,11 @@ jobs:
             echo "::error::leftover template-only markers after rename.sh"
             exit 1
           fi
+
+      - name: Test hook scripts (instantiated form)
+        # Re-run after rename.sh: catches placeholder-replacement
+        # corrupting a hook as well as behavioral regressions.
+        run: ./scripts/test-hooks.sh
 
       - name: Check executables survived the placeholder-replace pass
         run: |
