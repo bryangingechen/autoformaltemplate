@@ -129,7 +129,11 @@ session is where you fix it.
   distributed across the existing chapters. Forward-mode discipline
   still applies (the dep-graph IS the lemma index), but the to-do
   list lives in `notes/PhaseN.md`'s *Layer plan* section rather than
-  a single blueprint chapter.
+  a single blueprint chapter. Per-slice gate (two misses in
+  enharmonic Phase 17): before committing a slice that changes a
+  decl's *statement*, grep `blueprint/src/` for that decl — when the
+  `\lean{...}` name survives the flip, `checkdecls` cannot catch a
+  node still stating the legacy form; restate it in the same commit.
 - **Every commit is a potential handoff point.** Treat each commit
   as if the session could end on it. The pre-commit checklists
   below (*keep the hand-off contract honest*) and the Lean-side
@@ -145,10 +149,14 @@ session is where you fix it.
   commits with ≤10-LoC proofs that mostly alias existing mathlib
   facts, pause and audit whether the trajectory is approaching the
   headline or just accreting token API surface. The recourse is a
-  **planning commit** — convert the remaining work into sorry-bodied
-  sub-lemma skeletons (full statements + prose proofs + any
-  design-decision asides) in one commit, so subsequent commits close
-  one substantive skeleton each rather than another wrapper. When
+  **planning commit** — convert the remaining work into sub-lemma
+  skeletons (full statements + prose proofs + any design-decision
+  asides) in one commit, so subsequent commits close one substantive
+  skeleton each rather than another wrapper. Skeleton statements
+  carry undischarged cruxes as explicit `h…` hypotheses, never
+  `sorry` bodies — the `block-sorry-commit.sh` hook denies
+  sorry-adding commits (see `{{PROJECT_NAME}}/CLAUDE.md` *build and
+  lint gates*). When
   laying out sub-lemmas, fold mechanical assembly (an `iff`
   combining two halves, finite-union closure) into substantive
   predecessors rather than splitting them as separate "assembly
@@ -166,7 +174,10 @@ session is where you fix it.
   the project identity). In the `Co-Authored-By:` trailer, name the
   model *actually generating the commit* — check your own model
   identity rather than copying the trailer from recent `git log`
-  (history may have been authored by a different model).
+  (history may have been authored by a different model). Write the
+  model name in display form (`Claude Sonnet 4.6
+  <noreply@anthropic.com>`), not the model-id form
+  (`claude-sonnet-4-6`).
 - **Pushing to `master` triggers a Pages deploy** (blueprint, docs,
   upstreaming dashboard via `leanprover-community/docgen-action`).
   PRs run the same build but skip the deploy step. There is no

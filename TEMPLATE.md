@@ -154,15 +154,19 @@ these may be over-engineering for a smaller experiment:
 - **`.claude/commands/coordinate-phase.md`** — slash command for
   agent-driven phase coordination. Delete if you're not using Claude
   Code's slash command system.
-- **`.claude/settings.json` + `.claude/hooks/block-lake-update.sh`**
-  — PreToolUse hook that mechanically blocks `lake update` / `lake
-  … --update` (a hallucinated `--update` once rewrote a project's
-  toolchain + manifest mid-session and OOM-crashed the machine under
-  concurrent from-source mathlib rebuilds; see *Build discipline* in
-  `{{PROJECT_NAME}}/CLAUDE.md`). Quoted/heredoc mentions don't
-  trigger it. Keep it even without Claude Code — it's inert then;
-  personal settings belong in `.claude/settings.local.json`
-  (gitignored), not here.
+- **`.claude/settings.json` + `.claude/hooks/`** — two PreToolUse
+  hooks. `block-lake-update.sh` mechanically blocks `lake update` /
+  `lake … --update` (a hallucinated `--update` once rewrote a
+  project's toolchain + manifest mid-session and OOM-crashed the
+  machine under concurrent from-source mathlib rebuilds; see *Build
+  discipline* in `{{PROJECT_NAME}}/CLAUDE.md`). `block-sorry-commit.sh`
+  denies any `git commit` whose `.lean` diff adds a `sorry`/`admit`
+  (a long context-compacted session once committed a sorry'd skeleton
+  with a false "gates clean" attestation; prompt-level discipline
+  does not survive compaction, hooks do). Quoted/heredoc mentions
+  don't trigger either. Keep them even without Claude Code — they're
+  inert then; personal settings belong in
+  `.claude/settings.local.json` (gitignored), not here.
 - **`notes/model-experiment-protocol.md` + `notes/model-experiment.md`**
   — the model-tier dispatch experiment (rate each coordinator
   dispatch on S/P/B axes, pick a model rung, log outcomes; pooled

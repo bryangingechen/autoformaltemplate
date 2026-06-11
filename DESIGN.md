@@ -212,6 +212,27 @@ green only as a conditional over unsatisfiable hypotheses). **The
 tell:** a base-case hypothesis that effectively pins the ambient to
 the object (e.g. `∀ w, w = u ∨ w = v`).
 
+### Narrowing an induction motive requires an IH-application census
+
+Before narrowing an induction motive from the source's generality
+(all-`k` → `k = 0`, all-`d` → `d = 3`, …), **census every IH
+application in the source's full proof tree** — including
+applications to auxiliary objects built inside case interiors — and
+check each target lies in the narrowed domain. The reduction
+skeleton's children are not the complete list: a case interior can
+apply the theorem to an auxiliary object that is *not* a child of
+the reduction, so the narrowed proof *consumes* the general
+statement rather than subsuming it; a skeleton-level audit ("both
+reduction arms preserve the narrowed invariant") then passes while
+being precisely the audit that doesn't matter. Corollary: when
+scoping deferred work as "apply X to Y", **verify Y satisfies X's
+hypotheses at scoping time** — an ancestor project's "apply the IH
+to `G_v`" deferral hid a false hypothesis for four days and six
+sub-phases, even though the falsifying fact was already formalized
+in-repo. **The tell:** the narrowing rides in alongside an unrelated
+re-plan, justified by a parenthetical ("the general statement is
+recovered the same way") rather than a proof-tree walk.
+
 ### Mirror a source's case analysis by its discriminating parameter
 
 When mirroring a source's case analysis, pin each project node to

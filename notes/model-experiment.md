@@ -9,9 +9,9 @@ if this project won't run the experiment.)
 — the portable, repo-agnostic half (axes, assignment map, rubric,
 log schema). Keep it byte-identical across participating repos; this
 file carries only repo-local state: config, the dispatch log, and
-findings. Last protocol sync: 2026-06-10 (from
-CombinatorialRigidity via enharmonic: log-row timing rule + softened
-change-propagation framing; verified byte-identical).
+findings. Last protocol sync: 2026-06-10 evening (from
+CombinatorialRigidity: log-row append-hazard rule; matches
+CombinatorialRigidity, enharmonic pending).
 
 ## Repo-local config
 

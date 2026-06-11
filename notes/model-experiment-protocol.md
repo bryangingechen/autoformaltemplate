@@ -86,7 +86,11 @@ full** — gates, the full-diff read (mandatory below top rung), and
 the re-read of the updated hand-off — never between gates: a
 prematurely-scored row silently inflates the rubric and forces a
 history-visible correction once pushed. Correct a committed row by a
-follow-up edit, not a history-rewriting amend.
+follow-up edit, not a history-rewriting amend. When appending a row
+by string-edit, match the previous row's tail only — an edit whose
+match spans the following section header silently deletes that header
+(this clobbered a log's `## Findings` heading three times in one
+coordinator session before being caught).
 
 | Field | Meaning |
 |---|---|
