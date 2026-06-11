@@ -72,6 +72,21 @@ jobs:
             exit 1
           fi
 
+      - name: Check executables survived the placeholder-replace pass
+        run: |
+          # Regression test: replace_in_file once rewrote files via
+          # `mv` from mktemp, which stripped the executable bit from
+          # placeholder-bearing scripts (the .claude/hooks/*.sh hooks),
+          # silently disabling them in instantiated projects.
+          fail=0
+          for f in .claude/hooks/*.sh; do
+            if [ ! -x "$f" ]; then
+              echo "::error file=$f::lost its executable bit during rename.sh"
+              fail=1
+            fi
+          done
+          exit $fail
+
       - name: Check project directory and aggregator were renamed
         run: |
           test -d TestProject
