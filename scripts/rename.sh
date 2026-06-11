@@ -87,13 +87,15 @@ replace_in_file() {
         -e "s|{{project-name}}|$KEBAB|g" \
         ${GH_USER:+-e "s|{{GITHUB_USER}}|$GH_USER|g"} \
         "$f" > "$tmp"
-    # Only move if content actually changed (avoid touching mtimes
-    # for files with no placeholders).
+    # Only rewrite if content actually changed (avoid touching mtimes
+    # for files with no placeholders). Rewrite in place via cat so the
+    # original file's permissions survive — an mv from mktemp would
+    # strip the executable bit from placeholder-bearing scripts like
+    # .claude/hooks/*.sh.
     if ! cmp -s "$f" "$tmp"; then
-        mv "$tmp" "$f"
-    else
-        rm -f "$tmp"
+        cat "$tmp" > "$f"
     fi
+    rm -f "$tmp"
 }
 
 echo "$FILES" | while IFS= read -r f; do
