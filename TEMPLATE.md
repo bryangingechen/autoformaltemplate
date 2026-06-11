@@ -68,6 +68,85 @@ renamed, or any workflow file is left syntactically invalid YAML.
 `rename.sh` deletes it at instantiation, so projects created from the
 template never run it.
 
+## Maintaining the template (sync sessions)
+
+The template improves in both directions: process lessons land first
+in the downstream project where they were paid for, then sync back
+here; template-side improvements propagate out via re-sync prompts
+run by agents *in* the downstream repos (give them read-only access
+to this checkout, e.g. at `../autoformaltemplate`). A sync session
+has three parts.
+
+### 1. Sync in (downstream → template)
+
+- **Find the boundary.** Sync commits here are titled `Sync … from
+  <repo>` — `git log --oneline` locates the last one; the
+  protocol-file sync state is also recorded on
+  `notes/model-experiment.md`'s *Last protocol sync* line. Survey
+  each downstream repo's commits since then, filtered to the
+  template-relevant paths.
+- **Template-relevant paths**: the root and subdirectory
+  `CLAUDE.md`s, `.claude/commands/`, `.claude/hooks/` +
+  `.claude/settings.json`, `notes/model-experiment-protocol.md`
+  (byte-identical across repos by contract; the sibling log file's
+  rows are project content but its *structure* is template-relevant),
+  `TACTICS-GOLF.md`, `TACTICS-QUIRKS.md`, `CLEANUP.md`,
+  `MODULE-SYSTEM.md`, `REFS.md`, `blueprint/CLAUDE.md` /
+  `AUTHORING.md` / `lint.sh` / `verify.sh`, the *Cross-project
+  engineering principles* section of `DESIGN.md`, `scripts/`, and
+  workflows. Project math, phase notes, and repo-local experiment
+  config stay behind.
+- **Diff both directions, don't trust commit logs alone.** Diff each
+  file pair directly (placeholder noise aside): commit-message
+  surveys miss quiet edits, and the children-behind delta is exactly
+  what the part-3 prompts must carry.
+
+### 2. De-specialize what you port
+
+- Project names → `{{PROJECT_NAME}}` (and confirm any *new* file is
+  reached by `rename.sh`'s replace pass); `master` → "the default
+  branch" where a project may differ; concrete author identities →
+  "the project's existing commits".
+- **Keep war stories, trim repo-opaque tokens.** Attribute as
+  `(<repo> YYYY-MM-DD, model-experiment row N)` or `(<repo>
+  Phase N)`; drop tokens meaningless outside the source repo
+  (internal lemma names, design-§ numbers) while keeping the lesson
+  concrete enough to bite.
+- **Process rules are wording-sensitive** — port them near-verbatim.
+  When compressing, keep the target file's house style (DESIGN.md
+  principles are statement + the tell; coordinate-phase step 4 is
+  labeled bullets).
+- When both children amended the same file independently, take the
+  better-structured copy as the base and fold the other's deltas in;
+  don't union-merge prose.
+
+### 3. Sync out (template → downstream)
+
+Write one prompt per downstream repo, for an agent running *in that
+repo*. Each prompt should: name the template HEAD it syncs to; state
+which of that repo's own contributions are already incorporated (so
+the agent doesn't re-port them); list the missing items per file and
+where each lands; give the re-specialization map (project name,
+branch, restoring war-story specifics the template genericized);
+require a `diff` against the template copy for the byte-identical
+protocol file; and pin commit conventions (project author identity,
+actual-model `Co-Authored-By:` trailer in display form).
+
+### Per-commit gates for template work
+
+- `bash -n` any edited shell script; `scripts/test-hooks.sh` on any
+  commit touching a hook (CI runs it pre- and post-instantiation).
+- For `rename.sh` / workflow / placeholder changes, run the local
+  equivalent of the CI smoke test: copy the worktree, `git add -A`
+  in the copy (so `git ls-files` sees new files), run
+  `./scripts/rename.sh TestProject test-user`, then check leftover
+  placeholders / `template-only` markers, hook exec bits, and
+  workflow YAML validity.
+- After a sync lands content touching more than one auto-loaded
+  `CLAUDE.md`, re-check the suite for duplication (one canonical
+  home; cut only verbatim duplication — extract content to
+  read-on-demand files, don't delete it).
+
 ## What's in the template
 
 - **Infrastructure**: lakefile, lean-toolchain, .gitignore, .mcp.json,
@@ -167,6 +246,9 @@ these may be over-engineering for a smaller experiment:
   don't trigger either. Keep them even without Claude Code — they're
   inert then; personal settings belong in
   `.claude/settings.local.json` (gitignored), not here.
+  `scripts/test-hooks.sh` exercises both hooks (run it on any commit
+  that edits one); it travels with them, so delete it only if you
+  delete the hooks.
 - **`notes/model-experiment-protocol.md` + `notes/model-experiment.md`**
   — the model-tier dispatch experiment (rate each coordinator
   dispatch on S/P/B axes, pick a model rung, log outcomes; pooled

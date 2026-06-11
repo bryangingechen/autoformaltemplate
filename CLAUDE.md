@@ -6,7 +6,10 @@
 > placeholders are intentional and `lake build` does not work here.
 > For work on the template itself (docs, workflows, the rename script,
 > syncing lessons from downstream projects), the operative guide is
-> `TEMPLATE.md`; the only CI that runs on this repo is
+> `TEMPLATE.md` — its *Maintaining the template* section carries the
+> sync workflow (boundary-finding, template-relevant paths,
+> de-specialization rules, re-sync prompts, per-commit gates) and is
+> required reading for a sync session. The only CI on this repo is
 > `.github/workflows/template-ci.yml`, which smoke-tests
 > `scripts/rename.sh` instantiation on every push. The per-session
 > workflow, phase machinery, and hand-off contract below do **not**
