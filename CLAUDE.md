@@ -65,9 +65,7 @@ Every session, in order:
    triggers `notes/CLAUDE.md` auto-load.
 4. **`{{PROJECT_NAME}}/CLAUDE.md`** — auto-loads when an agent
    reads any `.lean` file under the subtree. Carries Lean-specific
-   discipline. (`TACTICS-QUIRKS.md`'s *Symptom index* is the first
-   place to look when a `lake build` fails with an unfamiliar
-   error.)
+   discipline.
 5. **DESIGN.md** — only when you're about to question a
    cross-cutting decision. The default answer is *don't*.
 6. **`notes/FRICTION.md`** — optional skim for an open

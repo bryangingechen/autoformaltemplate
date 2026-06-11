@@ -32,13 +32,10 @@ At session start, in order:
 
 1. **This file** — operational rules for the blueprint (static
    checks, local build, file layout, friction review).
-2. **`blueprint/AUTHORING.md`** — read-on-demand reference for
-   prose authoring conventions (annotation order, label prefixes,
-   cross-references, citations, what to include vs. skip,
-   appendices for mirror modules, proof verbosity). Consulted when
-   writing a new chapter, adding/updating an entry, opening a
-   mirror-module appendix, or settling a "does this lemma deserve
-   a blueprint entry?" question. Not auto-loaded.
+2. **`blueprint/AUTHORING.md`** — the authoring conventions listed
+   above; consult when writing a new chapter, adding/updating an
+   entry, opening a mirror-module appendix, or settling a "does this
+   lemma deserve a blueprint entry?" question. Not auto-loaded.
 3. **`blueprint/DESIGN.md`** — workflow modes and selectivity
    rationale. Skim once per project; re-read when the workflow mode
    for a phase is under discussion.
@@ -190,33 +187,17 @@ re-run of this gate is `CLEANUP.md` §A — but this is a *per-commit*
 gate, run at the moment `\leanok` is added, not a debt deferred to a
 cleanup round.
 
-The gate has a *second half* — constructibility — and it is the one
-that bites producers: even with every hypothesis honest, the intended
-**proof step may not follow** or the **target count the construction
-can't reach**. Before a producer node is scheduled as a *build*,
-trace its target quantity (rank/count/dimension) through the
-construction and confirm the **arithmetic closes** — not just that
-`\uses` edges type-check; math-first when the math is the hard part.
-(Calibration: a one-line `+(D−1)` vs `+D` shortfall once sat
-undetected under four re-plans.) The recon discipline for this lives in
-`../DESIGN.md` *Constructibility recon before scheduling a producer
-build*.
-
-The gate has a *third half* — structural fidelity. The second half
-confirms the **arithmetic** closes; this one confirms the **shape**
-does. When a `\leanok` (or to-be-built) node formalizes a step of a
-published proof, its **composition lemma must reproduce the source's
-argument *structure***, not just its conclusion and count. A
-locally-sound modelling choice can re-express the source's argument
-as a *different* one with a different — possibly intractable —
-obligation. **The tell:** the counts line up but you keep needing
-fresh hypotheses to bridge a gap the source doesn't have.
-**Corollary:** a node that is *green with its hard half deferred as a
-red sibling* must have that red sibling's feasibility **re-verified
-before downstream nodes build on the green half** —
-"green-with-a-red-sibling" ≠ "green". See `../DESIGN.md` *Match the
-source's argument structure, not just its conclusion* for the
-project-side rule.
+The gate has a *second half* — **constructibility** — and a *third* —
+**structural fidelity**. Even with every hypothesis honest, a
+producer's intended proof step may not follow or its target count may
+not close, and a node can match the source's conclusion while
+re-expressing the argument as a *different* one with an intractable
+obligation ("green-with-a-red-sibling" ≠ "green"). Both rules live
+canonically in `../DESIGN.md` — *Constructibility recon before
+scheduling a producer build* and *Match the source's argument
+structure, not just its conclusion* — read them before scheduling a
+producer node as a build or flipping `\leanok` on a source-mirroring
+step.
 
 ## Local build
 
