@@ -17,7 +17,9 @@ final message (default: commit NOTHING, leave `git status` clean) or a
 **design-pass commit** (a design-doc entry + a re-pointed hand-off in
 the phase note, committed as a docs commit under the project's usual
 per-commit checklists and author/trailer rules — the coordinator's
-prompt states your dispatched model for the trailer).
+prompt states your dispatched model for the trailer; if your own
+environment block identifies a different model, your environment
+wins — use its name and flag the mismatch in your return).
 
 Three clauses bind every recon / design-pass (each earned its place —
 the same rung pinned a route *wrong* unprimed and *right* primed with

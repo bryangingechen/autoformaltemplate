@@ -20,9 +20,13 @@ pre-commit checklists; this file only pins the loop contract):
   new branch — and match the git author identity of the project's
   existing commits. In the `Co-Authored-By:` trailer name the model
   YOU are actually running as, in display form; the coordinator's
-  invocation prompt states your dispatched model — use exactly that
-  name (a generic "name your own model" clause failed 3× across two
-  rungs before explicit naming fixed it).
+  invocation prompt states your dispatched model — use that name
+  (a generic "name your own model" clause failed 3× across two rungs
+  before explicit naming fixed it) — **unless your own environment
+  block identifies a different model: then your environment wins;
+  use its name and flag the mismatch in your return** (a coordinator
+  once asserted the wrong model for a whole dispatch batch, and the
+  agent that checked its environment caught it).
 - **Scope to fit one sitting.** Land the smallest complete deliverable
   that moves the hand-off forward — if the named deliverable won't
   fit, shrink the deliverable (a smaller complete lemma / sub-step),
