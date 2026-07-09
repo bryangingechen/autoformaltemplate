@@ -85,9 +85,12 @@ Every session, in order:
 
 The hand-off contract is: **`ROADMAP.md` + the active
 `notes/PhaseN.md` should be enough to identify the next concrete
-task** without reading any source file or commit history. If either
-drifts from that guarantee, the friction-review step at end-of-
-session is where you fix it.
+task** without reading any source file or commit history. (Between
+phases — when no `notes/PhaseN.md` is active — the proposed-phase
+queue `notes/next-phases.md`, pointed at from ROADMAP's *Next phases
+(proposed)* subsection, stands in for the active phase notes.) If
+either drifts from that guarantee, the friction-review step at end-
+of-session is where you fix it.
 
 ## Per-session workflow
 
@@ -99,7 +102,11 @@ session is where you fix it.
 3. Identify the active phase from ROADMAP's Status table. If the
    phase has not started yet, open ROADMAP's planning section for
    that phase and create `notes/PhaseN.md` in your first commit
-   (template in `notes/CLAUDE.md`).
+   (template in `notes/CLAUDE.md`). If no phase is active or planned
+   in the table (between phases), read `notes/next-phases.md` (via
+   ROADMAP's *Next phases (proposed)* pointer); the next concrete
+   task is opening the queue's first phase, with that file's per-
+   phase section as the planning input.
 
 > **Lean-touching sessions** also run a `lake build` sanity check
 > on the leftmost active phase's file before editing — see
@@ -137,6 +144,50 @@ session is where you fix it.
   decl's *statement*, grep `blueprint/src/` for that decl — when the
   `\lean{...}` name survives the flip, `checkdecls` cannot catch a
   node still stating the legacy form; restate it in the same commit.
+
+  The **additive variant** of the same gate (one miss in enharmonic
+  Phase 17, caught only by a later recon): a slice that lands a
+  unified *successor* for a node's existing declarations changes no
+  statement, so nothing fails — extend that node's `\lean{...}` list
+  with the successor name in the same commit, or record the repin
+  debt explicitly in the phase notes; otherwise the node silently
+  pins only names scheduled for deletion. The **deletion/retirement
+  variant** (three misses in one enharmonic sub-phase, repaired by a
+  coordinator follow-up): a slice is not complete until the deleted
+  declarations' names no longer appear as a *live cross-reference*
+  anywhere in the tree — `grep` the whole repo for each deleted name
+  and, in the **same commit**, repoint or remove every docstring /
+  comment reference. The trap is the rationalization "that reference
+  retires later with its own file's legacy": that holds *only* for a
+  reference sitting inside another decl that is itself scheduled for
+  deletion. A reference inside a **surviving** decl's docstring, or a
+  **live mirror lemma**, dangles permanently — repoint it to the
+  successor now. (A bare grep gives a false sense of completeness
+  here because the build stays green: docstring references don't
+  gate, and `checkdecls` only covers `\lean{...}` pins, not prose
+  `` `name` `` back-ticks. The only intentional surviving reference
+  to a deleted name is a retirement-history note that names it
+  precisely *because* it documents the deletion.)
+- **Docstrings are not evidence.** When planning or building against
+  a definition from an earlier phase — especially a mirror definition
+  with no upstream precedent — derive your claims from the definition
+  **body**, not its docstring or the prose that cites it, and check a
+  surprise with a small `lake env lean` witness before writing it
+  into a plan or chapter. (Precedent: an enharmonic docstring said a
+  merged-away vertex survives "dead"; the definition makes it a
+  *twin*, and the wrong claim propagated through a phase-open chapter
+  and a settled design decision before a pre-dispatch derivation
+  caught it — enharmonic Phases 21/24.) The same caution applies to
+  **proofs transcribed from a primary source, not just definitions**:
+  a faithfully-transcribed blueprint *statement* can carry a *proof*
+  that is **false against the project's Lean carrier** when the
+  carrier diverges from the source's implicit model — re-derive the
+  transcribed proof against the carrier (or fire a recon), especially
+  when a carrier / encoding decision is pinned. (Precedent: a
+  transcribed induction rode in an enharmonic blueprint from
+  phase-open through the carrier-pin commit before a recon caught
+  that the carrier already invalidated one of its steps — enharmonic
+  Phase 25.)
 - **Every commit is a potential handoff point.** Treat each commit
   as if the session could end on it. The pre-commit checklists
   below (*keep the hand-off contract honest*) and the Lean-side
@@ -178,9 +229,36 @@ session is where you fix it.
   model *actually generating the commit* — check your own model
   identity rather than copying the trailer from recent `git log`
   (history may have been authored by a different model). Write the
-  model name in display form (`Claude Sonnet 4.6
+  model name in display form (`Claude Sonnet 5
   <noreply@anthropic.com>`), not the model-id form
-  (`claude-sonnet-4-6`).
+  (`claude-sonnet-5`) — and use the *current* display name for the
+  rung (a stale example in this bullet once propagated into a landed
+  trailer — CombinatorialRigidity 2026-07-02). **Backticks in the
+  message body** — Lean identifiers, which most multi-line messages
+  here carry — must go through `git commit -F <file>` or a heredoc,
+  never an inline double-quoted `-m "…"`: zsh treats backticks inside
+  double quotes as command substitution, silently corrupting the
+  message and even *running* the embedded text (a coordinator doc
+  commit once ran `lake build`/`lake lint` from its own message and
+  had to be `--amend`ed — CombinatorialRigidity 2026-06-26).
+- **Never commit local machine paths** — not in tracked file content
+  and not in commit messages. Absolute or home-relative paths to a
+  developer's machine (`/Users/<name>/…`, `~/…`, `~/.claude*`,
+  agent / tooling log dirs, scratch checkouts, worktree paths) are
+  session-local noise that leaks one machine's layout into shared,
+  often-published history. When you need to *reference* such a
+  source — e.g. reconstructing a subagent's cost from local logs, or
+  pointing at a tool's output — describe it **generically** ("the
+  local agent logs", "the subagent transcript", "the blueprint
+  venv") rather than by absolute path. Paths *inside the repo*
+  (relative paths like `notes/PhaseN.md`, `{{PROJECT_NAME}}/…`) are
+  fine and encouraged. Pre-commit check: scan the staged diff **and**
+  the commit-message draft for `/Users/`, `~/`, or a home-dir
+  fragment; if found, reword before committing. (A local path
+  slipped into a tracked log cell and its commit message and had to
+  be scrubbed by a history rewrite — CombinatorialRigidity
+  2026-06-17; cheap to avoid up front, costly to remove after the
+  fact, impossible once pushed.)
 - **Pushing to `master` triggers a Pages deploy** (blueprint, docs,
   upstreaming dashboard via `leanprover-community/docgen-action`).
   PRs run the same build but skip the deploy step. There is no
@@ -213,7 +291,13 @@ content change (docs commits):
 - **Move deferred items to where they will land.** A lemma punted
   from Phase 2 to Phase 3 belongs in Phase 3's "Lemmas to develop"
   list with a one-line rationale, not as a footnote in Phase 2.
-  Forward-looking TODOs stranded under closed phases rot.
+  Forward-looking TODOs stranded under closed phases rot. **"Wiring",
+  "assembly", and "coordinator work" are not deferral categories:** a
+  deferred dispatch / case split / assembly is a deliverable like any
+  lemma — it gets a checklist item or a red blueprint node, never
+  just a commit-message phrase. (CombinatorialRigidity Phase 22a: "the
+  dispatch is the coordinator's wiring" left a whole arm of the
+  argument with no tracking artifact across five sub-phases.)
 - **Lift on promotion.** If a `notes/PhaseN.md` decision has been
   referenced in 2+ files or by 2+ phases, promote it to
   `TACTICS-GOLF.md` (general idiom), `TACTICS-QUIRKS.md` (rescue
@@ -266,6 +350,13 @@ at a phase close), including the **sub-phase close vs full-phase
 close** carve-out. It is on top of the per-commit checklists above.
 
 ## Referencing prior work
+
+**Citation is attribution, never a substitute for proof.** The
+project formalizes every result it uses — "cite as external" /
+"axiomatize" is not a planning option, and a phase-open or design
+pass must not present formalize-vs-cite as an open decision
+(`DESIGN.md` *Formalize everything the argument uses*). Everything
+below is about crediting results, not about whether to prove them.
 
 Cite the originator of every non-trivial mathematical claim, and
 verify each citation against a primary source before writing it.

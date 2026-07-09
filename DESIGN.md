@@ -100,6 +100,23 @@ with them. Each carries its statement plus the diagnostic *tell*;
 the worked examples live in the ancestors' logs and are trimmed
 here.
 
+### Formalize everything the argument uses — no cite/axiomatize fallback
+
+The project's goal is to fully formalize the results it uses. When
+the source paper *cites* an external result rather than proving it,
+that boundary is **not** mirrored: the external is formalized too,
+and the only open questions are **route and statement shape** —
+never "formalize vs cite". A phase-open or design pass must not
+present formalize-vs-cite (or axiomatize-as-hypothesis) as an open
+decision. Where the latitude actually lives: *statement shape* —
+consuming a stronger already-landed theorem can avoid formalizing a
+weaker external entirely (CombinatorialRigidity Phase 25 avoided two
+further papers this way); and *route* — a bottom-up rebuild can
+displace an axiomatize verdict (CombinatorialRigidity Phase 22d).
+**The tell:** a plan whose option list contains "cite as external",
+"axiomatize", or "assume as hypothesis" for a result the headline
+argument depends on.
+
 ### Forward-mode reduction chains: build the keystone first
 
 Forward mode's natural cadence — one dep-graph node = one commit =

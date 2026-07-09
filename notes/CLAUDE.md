@@ -44,6 +44,13 @@ for *organizing* this directory is here.
 - **`<topic>.md` deferred-plan docs** — a paused cross-phase plan
   keeps its own note with an explicit *Deferral* section naming the
   resume criteria; same editing discipline as phase notes.
+- **`next-phases.md`** — proposed-phase queue, the between-phases
+  stand-in for the active phase note (top-level `CLAUDE.md`
+  *hand-off contract*). One section per proposed phase (scope, why
+  now, entry criteria), ordered; ROADMAP's *Next phases (proposed)*
+  subsection points here. Created lazily when the first phase
+  proposal outlives the phase that spawned it; a section graduates
+  into `notes/PhaseN.md` + a ROADMAP row when its phase opens.
 - **`FRICTION.md`** — active friction log: open items, anti-patterns,
   mirrored upstream-eligible lemmas. File format and filing rule
   in the file's own header. Recognized entry tags include
