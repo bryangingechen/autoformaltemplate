@@ -29,12 +29,16 @@ plan, and engineering conventions. Read it after `CLAUDE.md`.
 ├── TACTICS-GOLF.md      golf reference: grind, mirror rule, fun_prop, MCP, ...
 ├── TACTICS-QUIRKS.md    rescue reference: subst, simp residuals, dot notation, ...
 ├── CLEANUP.md           between-phases / post-phase cleanup-round discipline
+├── PHASE-BOUNDARIES.md  phase open/close checklists (read at a phase boundary)
 ├── MODULE-SYSTEM.md     module-system conversion reference (read on demand)
 ├── formalization.yaml   project metadata self-report (synced at phase boundaries)
 ├── LICENSE              Apache-2.0
-├── .claude/commands/    project slash commands (coordinate-phase)
+├── .claude/commands/    project slash commands (coordinate-phase + its playbook)
+├── .claude/agents/      subagent definitions the coordinator dispatches
 ├── notes/               per-phase work logs + cross-cutting logs
 │   ├── PhaseN.md        lemma checklist + decisions + hand-off for Phase N
+│   ├── coordinate-phase-rescue.md  coordinator rescue reference (read on demand)
+│   ├── dispatch-log.md  /coordinate-phase exception log (coordinator-owned)
 │   ├── FRICTION.md      long-running API/tactic friction log (created lazily)
 │   └── PERFORMANCE.md   build-time + profiling notes (created lazily)
 ├── {{PROJECT_NAME}}.lean        top-level entry point

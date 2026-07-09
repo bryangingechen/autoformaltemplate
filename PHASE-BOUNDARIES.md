@@ -176,13 +176,14 @@ of* the per-commit checklists:
   nodes as they surface mid-phase (one line each) and gets discharged
   at phase close is a proven pattern (CombinatorialRigidity
   `notes/BlueprintExposition.md`).
-- **If the model-tier dispatch experiment is running and this phase is
-  its testbed**, write the phase's *Findings* close-out and archive the
-  closed (sub-)phase's log rows per `notes/model-experiment.md`'s own
-  upkeep notes, so the coordinator's every-dispatch read of the live
-  file stays small. (Calibration: a CombinatorialRigidity sub-phase
-  closed without archiving and ~180 stale rows accumulated in the
-  every-dispatch read until the next cleanup.)
+- **If the phase ran under `/coordinate-phase`**, groom the exception
+  log (`notes/dispatch-log.md`): distill the phase's recurring
+  exceptions into its *Findings* section, promote stable lessons into
+  the coordinator command's *Dispatch playbook* / CLAUDE.md, and prune
+  the promoted entries. (Calibration, from the concluded model-tier
+  experiment this log replaces: an ancestor sub-phase closed without
+  grooming and ~180 stale rows accumulated in the every-dispatch read
+  until the next cleanup.)
 - **Compress the just-closed (sub-)phase's working-doc tails — in
   place, at the close.** Two in-place shrinks (both keep the
   every-session reads small): **(a)** the phase's *design doc*

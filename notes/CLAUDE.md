@@ -64,13 +64,15 @@ for *organizing* this directory is here.
 - **`PERFORMANCE.md`** — performance investigations and structural
   options (Lean module system, import boundaries). Its own header
   explains the format. Created lazily.
-- **`model-experiment-protocol.md` / `model-experiment.md`** — the
-  model-tier dispatch experiment (which subagent model rung per
-  task). The protocol file is portable — keep it byte-identical
-  across participating repos; the log file is repo-local (config +
-  dispatch log + findings); see `model-experiment.md` Status
-  line — it is the single home for arm-or-delete instructions
-  and gates `.claude/commands/coordinate-phase.md`.
+- **`dispatch-log.md`** — the `/coordinate-phase` exception log
+  (escalations, probes, BLOCKED/killed dispatches, gate-invisible
+  defects caught in verification). Coordinator-owned; routine clean
+  dispatches are NOT logged. Row discipline in the file's own
+  header; the rung-choice rules live in the coordinator command's
+  *Dispatch playbook* section.
+- **`coordinate-phase-rescue.md`** — symptom-indexed rescue
+  reference for the `/coordinate-phase` loop (read on demand when a
+  trigger in the command body points at it).
 
 ## One canonical home per content type
 
