@@ -44,16 +44,18 @@ audit passes — blueprint/Lean divergence, code-smell sweeps,
 long-proof audits) lives in `CLEANUP.md`; read it when running such
 a round or before opening a `notes/PhaseN-cleanup.md` work log.
 
-Three further references are **read on demand, not session-start
-orientation**: `MODULE-SYSTEM.md` (converting files to the Lean
-module system; debugging `module`-related build failures),
-`blueprint/AUTHORING.md` (blueprint TeX authoring conventions —
-annotation order, label prefixes, citations, include-vs-skip,
-proof verbosity), and `REFS.md` (reading the reference PDFs in
-`.refs/`). The auto-loaded CLAUDE.md suite is a per-session
-token budget; when it grows, extract to read-on-demand references
-like these rather than deleting content (see the phase-close
-organization review).
+Four further references are **read on demand, not session-start
+orientation**: `PHASE-BOUNDARIES.md` (the full phase open/close
+checklists — read at a phase boundary; the trigger summaries +
+pointers stay in *Per-session workflow* below), `MODULE-SYSTEM.md`
+(converting files to the Lean module system; debugging
+`module`-related build failures), `blueprint/AUTHORING.md`
+(blueprint TeX authoring conventions — annotation order, label
+prefixes, citations, include-vs-skip, proof verbosity), and
+`REFS.md` (reading the reference PDFs in `.refs/`). The auto-loaded
+CLAUDE.md suite is a per-session token budget; when it grows,
+extract to read-on-demand references like these rather than
+deleting content (see the phase-close organization review).
 
 ## Reading order
 
@@ -236,105 +238,32 @@ discipline.
 
 ### When this commit opens a phase
 
-Phase opening fires on the first commit that turns the new phase
-on — typically the commit that creates `notes/PhaseN.md` and either
+Phase opening fires on the first commit that turns the new phase on —
+typically the commit that creates `notes/PhaseN.md` and either
 (forward mode) opens the new phase's blueprint chapter or
-(structural-edit mode) lays down the *Layer plan* that drives the
-in-place restate of existing chapters. On top of the per-commit
-checklists:
-
-- Add or update the phase's row in the ROADMAP Status table (status:
-  *planning* or *in progress*) and write the §N planning section.
-  **The table cell is a thin pointer**: a status marker plus at most
-  one short scope clause and a `(see notes/PhaseN.md)` pointer —
-  never a restatement of the §N summary.
-- Create `notes/PhaseN.md` from the template in `notes/CLAUDE.md`.
-- **Run the red-node consistency gate** when the phase opens to
-  build already-stubbed blueprint nodes: read the target nodes
-  end-to-end *including proofs* and confirm each is self-consistent —
-  the proof routes through the argument the statement claims, and no
-  live `\uses` or proof step points at a superseded node. Red nodes
-  fall through the `\leanok`-gated honesty gate (see
-  `blueprint/CLAUDE.md`), so phase-open is the only forced re-read
-  of a deferred node's proof.
-- **Sync the user-facing status surfaces** so the project's
-  externally-visible state reflects that Phase N is now in progress:
-  - `README.md` — *Project status* prose.
-  - `home_page/index.md` — *Project status* prose and the phase
-    table (add the new row).
-  - `blueprint/src/chapter/intro.tex` — §*Phase plan* prose and the
-    enumerate (add the new bullet); update the dep-graph-status line
-    at the end of the section if relevant.
-  - `formalization.yaml` — `status.scope` if the new phase changes
-    the in-progress description; add any new `sources` entries the
-    phase introduces.
-
-  These are the project's public face (the first three render to
-  GitHub Pages on every master push); let them drift and the website
-  + README silently misrepresent project state. Confirm Phase N-1's
-  status on each surface at the same time — if the previous phase
-  closed without flipping these, do it here.
-
-  **They are reader-facing summaries, not a status log.** Two rules:
-  *register* — these surfaces address a domain reader or site
-  visitor, not an agent mid-phase; agent-process jargon
-  (`green-modulo-N`, `design-pass-first`, sub-phase blow-by-blow,
-  raw blueprint labels in prose) is banned. *Sync = re-summarize,
-  not append* — the orientation prose is fixed-size; a paragraph
-  added per phase means you are logging status, not summarizing.
-- **If the project keeps a cross-phase program doc** (a
-  `notes/<program>.md` map spanning several phases), sync it here
-  too — docs with no CI gate drift silently, and phase boundaries
-  are the only forced touch-point. Per-phase entries stay
-  one-paragraph-max, pointing at §N / `notes/PhaseN.md`.
+(structural-edit mode) lays down the *Layer plan*. **The full
+phase-open checklist** — the ROADMAP row + §N planning section, the
+sub-lettered-phase codes-until-open convention, the user-facing
+status-surface sync (README + home_page + intro.tex +
+formalization.yaml, with its reader-facing jargon-free discipline),
+the cross-phase program-doc sync, and the red-node consistency gate —
+lives in **`PHASE-BOUNDARIES.md` *When this commit opens a phase***
+(read it at a phase open). It is on top of the per-commit checklists
+above.
 
 ### When this commit closes a phase
 
-Phase completion fires regardless of where in a session it happens.
-The commit that takes the last red node green for a phase (or that
-otherwise discharges the phase's target) carries extra work *on top
-of* the per-commit checklists above:
-
-- Flip the phase's row in the ROADMAP Status table to ✓, and
-  **re-thin the cell** while you're there — §N prose is the *single*
-  per-phase summary home; a cell that has absorbed a summary gets
-  cut back to marker + scope clause + pointer.
-- **Compress its planning section in ROADMAP** to a one-paragraph
-  summary plus a pointer to `notes/PhaseN.md`. The lemma list and
-  decisions live in `notes/PhaseN.md`; ROADMAP carries the hand-off
-  summary.
-- **Sync the user-facing status surfaces.** Same surfaces (and same
-  register / re-summarize rules) as the phase-open subsection above:
-  `README.md` *Project status*, `home_page/index.md` *Project
-  status* + phase table, `blueprint/src/chapter/intro.tex` §*Phase
-  plan* + enumerate (including the dep-graph-status line), and
-  `formalization.yaml`. Flip Phase N's marker to ✓ on each. In
-  `formalization.yaml`, update `status.scope`, add the phase's
-  headline theorem to `status.main_results` and `alignment`
-  (verified with `#print axioms`), and record any new `fidelity`
-  divergences — backfilling that file at project end loses exactly
-  the per-phase detail it exists to capture. Closing a phase folds
-  now-closed phases back into chapter/arc-level summaries on every
-  surface; don't just append a new paragraph.
-- **Re-read each new or edited blueprint chapter end-to-end as a
-  domain mathematician.** Per-commit node edits accrete
-  formalization asides ("formalized basis-free via ...") that read
-  as changelog, not math — collapse them. This pass is also where
-  any crux-node expositions get written (see `blueprint/CLAUDE.md`).
-- **Review project organization.** Re-skim ROADMAP.md,
-  `TACTICS-GOLF.md`, `TACTICS-QUIRKS.md`, and `notes/FRICTION.md`
-  (status sections). Have decisions in `notes/PhaseN.md` accumulated
-  past the lift-on-promotion threshold? Has FRICTION.md grown
-  unscannable? Is any DESIGN.md / ROADMAP.md prose-count or
-  section-name reference stale? **Audit the auto-loaded CLAUDE.md
-  suite for bloat** (this file + the three subdirectory ones): every
-  session pays their token cost at start; when a section has grown
-  past orientation size, extract it to a read-on-demand reference
-  (the `MODULE-SYSTEM.md` / `blueprint/AUTHORING.md` pattern), don't
-  delete it. Apply the small fix in this commit if obvious;
-  otherwise file a project-organization friction entry to address
-  next phase. This step is what keeps the docs from drifting between
-  phase boundaries.
+Phase completion fires regardless of where in a session it happens —
+the commit that takes the last red node green for a phase (or
+otherwise discharges the phase's target). **The full phase-close
+checklist** — flip + re-thin the ROADMAP row, compress the §N
+planning section, sync the user-facing status surfaces (incl.
+`formalization.yaml` alignment via `#print axioms`), the end-to-end
+blueprint-chapter re-read + crux-node expositions, working-doc-tail
+compression, and the project-organization review — lives in
+**`PHASE-BOUNDARIES.md` *When this commit closes a phase*** (read it
+at a phase close), including the **sub-phase close vs full-phase
+close** carve-out. It is on top of the per-commit checklists above.
 
 ## Referencing prior work
 
