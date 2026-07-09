@@ -80,22 +80,27 @@ has three parts.
 ### 1. Sync in (downstream → template)
 
 - **Find the boundary.** Sync commits here are titled `Sync … from
-  <repo>` — `git log --oneline` locates the last one; the
-  protocol-file sync state is also recorded on
-  `notes/model-experiment.md`'s *Last protocol sync* line. Survey
-  each downstream repo's commits since then, filtered to the
+  <repo>` — `git log --oneline` locates the last one. A downstream
+  repo may also keep a **sync tracker** (`notes/<file>-sync.md`: one
+  line per pending amendment, `date — tag → target §`) — when
+  present, it is the propagation checklist and the first thing to
+  read (CombinatorialRigidity's `model-experiment-sync.md` carried a
+  month of protocol amendments as one-liners where copying the
+  amendment text had previously ballooned a file header). Survey
+  each downstream repo's commits since the boundary, filtered to the
   template-relevant paths.
 - **Template-relevant paths**: the root and subdirectory
-  `CLAUDE.md`s, `.claude/commands/`, `.claude/hooks/` +
-  `.claude/settings.json`, `notes/model-experiment-protocol.md`
-  (byte-identical across repos by contract; the sibling log file's
-  rows are project content but its *structure* is template-relevant),
-  `TACTICS-GOLF.md`, `TACTICS-QUIRKS.md`, `CLEANUP.md`,
-  `MODULE-SYSTEM.md`, `REFS.md`, `blueprint/CLAUDE.md` /
-  `AUTHORING.md` / `lint.sh` / `verify.sh`, the *Cross-project
-  engineering principles* section of `DESIGN.md`, `scripts/`, and
-  workflows. Project math, phase notes, and repo-local experiment
-  config stay behind.
+  `CLAUDE.md`s, `.claude/commands/` (including the coordinator's
+  *Dispatch playbook* section — portable by content across repos),
+  `.claude/agents/`, `.claude/hooks/` + `.claude/settings.json`,
+  `notes/coordinate-phase-rescue.md`, `notes/dispatch-log.md` (its
+  rows are project content but its *structure* + header discipline
+  are template-relevant), `PHASE-BOUNDARIES.md`, `TACTICS-GOLF.md`,
+  `TACTICS-QUIRKS.md`, `CLEANUP.md`, `MODULE-SYSTEM.md`, `REFS.md`,
+  `blueprint/CLAUDE.md` / `AUTHORING.md` / `lint.sh` / `verify.sh`,
+  the *Cross-project engineering principles* section of `DESIGN.md`,
+  `scripts/`, and workflows. Project math, phase notes, and
+  repo-local config stay behind.
 - **Diff both directions, don't trust commit logs alone.** Diff each
   file pair directly (placeholder noise aside): commit-message
   surveys miss quiet edits, and the children-behind delta is exactly
@@ -108,10 +113,11 @@ has three parts.
   branch" where a project may differ; concrete author identities →
   "the project's existing commits".
 - **Keep war stories, trim repo-opaque tokens.** Attribute as
-  `(<repo> YYYY-MM-DD, model-experiment row N)` or `(<repo>
-  Phase N)`; drop tokens meaningless outside the source repo
-  (internal lemma names, design-§ numbers) while keeping the lesson
-  concrete enough to bite.
+  `(<repo> YYYY-MM-DD)` or `(<repo> Phase N)` (older lessons may
+  also cite `model-experiment row N` — those rows live in the
+  downstream repos' archives); drop tokens meaningless outside the
+  source repo (internal lemma names, design-§ numbers) while keeping
+  the lesson concrete enough to bite.
 - **Process rules are wording-sensitive** — port them near-verbatim.
   When compressing, keep the target file's house style (DESIGN.md
   principles are statement + the tell; coordinate-phase step 4 is
@@ -156,12 +162,14 @@ actual-model `Co-Authored-By:` trailer in display form).
   Jekyll skeleton, Apache-2.0 `LICENSE`.
 - **Process docs**: `CLAUDE.md` (root + per-subdirectory), `ROADMAP.md`,
   `DESIGN.md`, `CLEANUP.md`, `TACTICS-GOLF.md`, `TACTICS-QUIRKS.md`,
-  `MODULE-SYSTEM.md` / `blueprint/AUTHORING.md` / `REFS.md`
-  (read-on-demand), `notes/Phase0.md` scaffold (Phase 0 = write the
-  informal blueprint end-to-end before any Lean), and the
-  model-tier dispatch experiment
-  (`notes/model-experiment-protocol.md` + `notes/model-experiment.md`,
-  armed by the log's Status line — see below).
+  `PHASE-BOUNDARIES.md` / `MODULE-SYSTEM.md` / `blueprint/AUTHORING.md`
+  / `REFS.md` / `notes/coordinate-phase-rescue.md` (read-on-demand),
+  `notes/Phase0.md` scaffold (Phase 0 = write the informal blueprint
+  end-to-end before any Lean), and the coordinator machinery: the
+  `/coordinate-phase` command with its *Dispatch playbook* (a standing
+  model-choice guideline distilled from a concluded ~890-dispatch
+  two-repo experiment), the `.claude/agents/` subagent definitions it
+  dispatches, and the `notes/dispatch-log.md` exception log.
 - **Project metadata**: `formalization.yaml` skeleton (the
   [mathlib-initiative self-reporting
   schema](https://github.com/mathlib-initiative/formalization.yaml));
@@ -230,10 +238,14 @@ these may be over-engineering for a smaller experiment:
   only if you expect to mirror lemmas for upstream PR. The directory
   is created lazily; delete the `README.md` if you don't anticipate
   needing it.
-- **`.claude/commands/coordinate-phase.md`** — slash command for
-  agent-driven phase coordination. Delete if you're not using Claude
-  Code's slash command system.
-- **`.claude/settings.json` + `.claude/hooks/`** — two PreToolUse
+- **`.claude/commands/coordinate-phase.md` + `.claude/agents/` +
+  `notes/coordinate-phase-rescue.md` + `notes/dispatch-log.md`** —
+  the coordinator loop: the slash command (with its *Dispatch
+  playbook* model-choice guideline), the `phase-builder` / `recon`
+  subagent definitions it dispatches, the symptom-indexed rescue
+  reference, and the exception log. Delete the set if you'll work
+  solo without agent-driven coordination.
+- **`.claude/settings.json` + `.claude/hooks/`** — three PreToolUse
   hooks. `block-lake-update.sh` mechanically blocks `lake update` /
   `lake … --update` (a hallucinated `--update` once rewrote a
   project's toolchain + manifest mid-session and OOM-crashed the
@@ -243,18 +255,14 @@ these may be over-engineering for a smaller experiment:
   (a long context-compacted session once committed a sorry'd skeleton
   with a false "gates clean" attestation; prompt-level discipline
   does not survive compaction, hooks do). Quoted/heredoc mentions
-  don't trigger either. Keep them even without Claude Code — they're
-  inert then; personal settings belong in
+  don't trigger either. `block-nested-agent.sh` denies Agent-tool
+  calls from inside a subagent (a dispatched build agent once fanned
+  out sub-subagents sharing the working tree). Keep them even without
+  Claude Code — they're inert then; personal settings belong in
   `.claude/settings.local.json` (gitignored), not here.
-  `scripts/test-hooks.sh` exercises both hooks (run it on any commit
-  that edits one); it travels with them, so delete it only if you
-  delete the hooks.
-- **`notes/model-experiment-protocol.md` + `notes/model-experiment.md`**
-  — the model-tier dispatch experiment (rate each coordinator
-  dispatch on S/P/B axes, pick a model rung, log outcomes; pooled
-  across participating repos). Ships disarmed (the log's Status is
-  `not started`); flip the Status to `running` to join, or delete
-  both files if the project won't participate.
+  `scripts/test-hooks.sh` exercises all three hooks (run it on any
+  commit that edits one); it travels with them, so delete it only if
+  you delete the hooks.
 
 ## What the template does *not* include
 
