@@ -13,6 +13,15 @@
             "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/block-sorry-commit.sh"
           }
         ]
+      },
+      {
+        "matcher": "Agent",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/block-nested-agent.sh"
+          }
+        ]
       }
     ]
   }

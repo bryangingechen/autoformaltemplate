@@ -99,6 +99,37 @@ run_hook block-sorry-commit.sh allow "non-.lean file mention" \
     'git add -A && git commit -m "x"'
 
 # ---------------------------------------------------------------
+# block-nested-agent.sh — deny Agent-tool calls whose hook input
+# carries an agent_id (subagent context); top-level calls (no
+# agent_id) pass through. Payload shape differs from the Bash
+# hooks, so build it directly instead of via run_hook.
+
+# agent_case <expected> <name> <json-payload>
+agent_case() {
+    local expected="$1" name="$2" payload="$3"
+    local out decision
+    out=$(printf '%s' "$payload" | "$HOOKS_DIR/block-nested-agent.sh")
+    if printf '%s' "$out" | grep -q '"permissionDecision": *"deny"'; then
+        decision=deny
+    else
+        decision=allow
+    fi
+    if [ "$decision" = "$expected" ]; then
+        echo "PASS  block-nested-agent.sh: $name"
+    else
+        echo "FAIL  block-nested-agent.sh: $name (expected $expected, got $decision)"
+        fail=1
+    fi
+}
+
+agent_case deny  "subagent context (agent_id present)" \
+    '{"agent_id":"a1b2c3","tool_input":{"prompt":"do a thing"}}'
+agent_case allow "top-level dispatch (no agent_id)" \
+    '{"tool_input":{"prompt":"do a thing"}}'
+agent_case allow "empty agent_id" \
+    '{"agent_id":"","tool_input":{"prompt":"do a thing"}}'
+
+# ---------------------------------------------------------------
 if [ "$fail" -ne 0 ]; then
     echo "scripts/test-hooks.sh: FAILED."
     exit 1
